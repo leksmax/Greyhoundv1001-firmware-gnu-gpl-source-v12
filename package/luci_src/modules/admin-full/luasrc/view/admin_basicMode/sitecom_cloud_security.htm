@@ -1,0 +1,209 @@
+<%+header%>
+<%local uci = luci.model.uci.cursor()%>
+<script type="text/javascript">
+var GREY_SWITCH_OFF = 0;
+var GREY_SWITCH_ON = 1;
+var VIRUS_SWITCH_OFF = 2;
+var VIRUS_SWITCH_ON = 3; 
+var PROTECTION_SWITCH_OFF = 4;
+var PROTECTION_SWITCH_ON = 5;
+var URL_SWITCH_OFF = 6;
+var URL_SWITCH_ON = 7;
+var EXPLOIT_SWITCH_OFF = 8;
+var EXPLOIT_SWITCH_ON = 9;
+var TRACK_SWITCH_OFF = 10;
+var TRACK_SWITCH_ON = 11;
+var ADVERTISING_SWITCH_OFF = 12;
+var ADVERTISING_SWITCH_ON = 13;
+
+function switchChange(value)
+{
+	switch(parseInt(value))
+	{		
+		case GREY_SWITCH_OFF:
+			document.getElementById("greybutton_off").style.display = '';
+			document.getElementById("greybutton_on").style.display = 'none';
+			break;
+		case GREY_SWITCH_ON:
+			document.getElementById("greybutton_off").style.display = 'none';
+			document.getElementById("greybutton_on").style.display = '';
+			break;
+		case VIRUS_SWITCH_OFF:
+			document.getElementById("virus_off").style.display = '';
+			document.getElementById("virus_on").style.display = 'none';
+			break;
+		case VIRUS_SWITCH_ON:
+			document.getElementById("virus_off").style.display = 'none';
+			document.getElementById("virus_on").style.display = '';
+			break;
+		case PROTECTION_SWITCH_OFF:
+			document.getElementById("protection_off").style.display = '';
+			document.getElementById("protection_on").style.display = 'none';
+			break;
+		case PROTECTION_SWITCH_ON:
+			document.getElementById("protection_off").style.display = 'none';
+			document.getElementById("protection_on").style.display = '';
+			break;
+		case URL_SWITCH_OFF:
+			document.getElementById("url_off").style.display = '';
+			document.getElementById("url_on").style.display = 'none';
+			break;
+		case URL_SWITCH_ON:
+			document.getElementById("url_off").style.display = 'none';
+			document.getElementById("url_on").style.display = '';
+			break;
+		case EXPLOIT_SWITCH_OFF:
+			document.getElementById("exploit_off").style.display = '';
+			document.getElementById("exploit_on").style.display = 'none';
+			break;
+		case EXPLOIT_SWITCH_ON:
+			document.getElementById("exploit_off").style.display = 'none';
+			document.getElementById("exploit_on").style.display = '';
+			break;
+		case TRACK_SWITCH_OFF:
+			document.getElementById("track_off").style.display = '';
+			document.getElementById("track_on").style.display = 'none';
+			break;
+		case TRACK_SWITCH_ON:
+			document.getElementById("track_off").style.display = 'none';
+			document.getElementById("track_on").style.display = '';
+			break;
+		case ADVERTISING_SWITCH_OFF:
+			document.getElementById("advertising_off").style.display = '';
+			document.getElementById("advertising_on").style.display = 'none';
+			break;
+		case ADVERTISING_SWITCH_ON:
+			document.getElementById("advertising_off").style.display = 'none';
+			document.getElementById("advertising_on").style.display = '';
+			break;
+	}
+}
+function copyto()
+{
+	document.getElementById("greybutton_off").style.display = '';
+	document.getElementById("virus_on").style.display = '';
+	document.getElementById("protection_on").style.display = '';
+	document.getElementById("url_on").style.display = '';
+	document.getElementById("exploit_on").style.display = '';
+	document.getElementById("track_on").style.display = '';
+	document.getElementById("advertising_on").style.display = '';
+}
+</script>
+<body onLoad="copyto();">
+<form action="<%=REQUEST_URI%>" method="post" >
+	<table width="100%" style="border-bottom:2px #000000 solid;border-collapse:collapse">
+	<tr class="SubpageHeading_3">
+		<td style="padding-left:30px;"><%:Turn cloud security on/off%></td>
+	</tr>	
+
+	<tr class="SubpageHeading_3" style="background-color:#696969">
+	<td style="padding-left:30px;width:50%"><%:Cloud Security%>
+	</td>
+	<td style="padding-left:30px;">
+		<img src="<%=media%>/icons/basic/form-switch-on-grey.png" id="greybutton_on" style="display:none" onclick="switchChange(GREY_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off-grey.png" id="greybutton_off" style="display:none" onclick="switchChange(GREY_SWITCH_ON);" alt=""/>
+	</td>
+	<td style="text-align:right;padding-right:30px;">
+		<img src="<%=media%>/icons/basic/icon-info.png" alt=""/>
+	</td>
+	</tr style="padding-right:30px;">
+	<tr class="SubpageHeading_3">
+		<td colspan="3" style="padding-right:30px;text-align:right;">
+		<%:(56 days remaining)%>
+		<input class="cbi-button" type="submit" name="buy_subscription" value="<%:Buy subscription%>">&nbsp;&nbsp;
+		<input class="cbi-button cbi-button-edit" type="submit" name="cbi.apply" value="<%:Edit%>">
+		</td>
+	</tr>
+	</table>
+
+	<table width="100%" style="border-bottom:2px #000000 solid;">
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Protection Status%></td>
+	</tr>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Threats and attacks successfully blocked%></td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Phishing links, exploits and unsage websites%></td>
+		<td class="td_basic_style"><%:---%></td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Viruses and malicious downloads%></td>
+		<td class="td_basic_style"><%:---%></td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Protection Status%></td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Cloud Security Subscription%></td>
+		<td class="td_basic_style"><%:---%></td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Subscription time remaining%></td>
+		<td class="td_basic_style"><%:---%></td>
+	</tr>	
+	</table>
+
+	<table width="100%">
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Cloud Security Services%></td>
+	</tr>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Anti-virus%></td>
+		<td class="td_basic_style">
+		<img src="<%=media%>/icons/basic/form-switch-on.png" id="virus_on" style="display:none" onclick="switchChange(VIRUS_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off.png" id="virus_off" style="display:none" onclick="switchChange(VIRUS_SWITCH_ON);" alt=""/>
+		</td>	
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Anti-Phishing Protection%></td>
+		<td class="td_basic_style">
+		<img src="<%=media%>/icons/basic/form-switch-on.png" id="protection_on" style="display:none" onclick="switchChange(PROTECTION_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off.png" id="protection_off" style="display:none" onclick="switchChange(PROTECTION_SWITCH_ON);" alt=""/>
+		</td>	
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:URL Blockercd %></td>
+		<td class="td_basic_style">
+		<img src="<%=media%>/icons/basic/form-switch-on.png" id="url_on" style="display:none" onclick="switchChange(URL_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off.png" id="url_off" style="display:none" onclick="switchChange(URL_SWITCH_ON);" alt=""/>
+		</td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Exploit prevention%></td>
+		<td class="td_basic_style">
+		<img src="<%=media%>/icons/basic/form-switch-on.png" id="exploit_on" style="display:none" onclick="switchChange(EXPLOIT_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off.png" id="exploit_off" style="display:none" onclick="switchChange(EXPLOIT_SWITCH_ON);" alt=""/>
+		</td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Do not track-functionality%></td>
+		<td class="td_basic_style">
+		<img src="<%=media%>/icons/basic/form-switch-on.png" id="track_on" style="display:none" onclick="switchChange(TRACK_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off.png" id="track_off" style="display:none" onclick="switchChange(TRACK_SWITCH_ON);" alt=""/>
+		</td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Advertising blocker%></td>
+		<td class="td_basic_style">
+		<img src="<%=media%>/icons/basic/form-switch-on.png" id="advertising_on" style="display:none" onclick="switchChange(ADVERTISING_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off.png" id="advertising_off" style="display:none" onclick="switchChange(ADVERTISING_SWITCH_ON);" alt=""/>
+		</td>
+	</tr>	
+	</table>
+	<div  style="padding-right:30px;text-align:right;">
+	<input class="cbi-button cbi-button-save" type="submit" name="save" value="<%:Save%>">
+	</div>
+</form>
+</body>
+<%+footer%>

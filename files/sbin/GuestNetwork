@@ -1,0 +1,38 @@
+#!/bin/sh
+# zeccaptive clear iptable, so it's necessary to call GuestNetwork after zeccaptive !!!!
+
+wifi0_GuestDisable=$(uci get wireless.wifi0_guest.disabled)
+wifi1_GuestDisable=$(uci get wireless.wifi1_guest.disabled)
+opmode0=$(uci get wireless.wifi0.opmode)
+opmode1=$(uci get wireless.wifi1.opmode)
+	
+if [ "$opmode0" == "ap" -a "$wifi0_GuestDisable" == "0" ] || 
+	[ "$opmode1" == "ap" -a "$wifi1_GuestDisable" == "0" ] ||
+	[ "$opmode0" == "wds_ap" -a "$wifi0_GuestDisable" == "0" ] || 
+	[ "$opmode1" == "wds_ap" -a "$wifi1_GuestDisable" == "0" ]; then
+
+	local brlanIP=$(ifconfig br-lan | grep Bcast | awk -F " " '{print $2}' | awk -F ":" '{print $2}')
+	local brlanMask=$(ifconfig br-lan | grep Bcast | awk -F " " '{print $4}' | awk -F ":" '{print $2}')
+	local brlanPREFIX=$(ipcalc.sh $brlanIP $brlanMask | grep PREFIX | awk -F "PREFIX=" '{print $2}' | awk -F " " '{print $1}')
+	local brlanSegment="$brlanIP"/"$brlanPREFIX"
+	local GuestIP=$(uci get network.guest.ipaddr)
+	local GuestMask=$(uci get network.guest.netmask)
+	local GuestPREFIX=$(ipcalc.sh $GuestIP $GuestMask | grep PREFIX | awk -F "PREFIX=" '{print $2}' | awk -F " " '{print $1}')
+	local GuestSegment="$GuestIP"/"$GuestPREFIX"
+
+	########## Translate the IP of br-guest into the IP of br-lan
+	iptables -t nat -I POSTROUTING 1 -s $GuestSegment -o br-lan -j MASQUERADE
+	########## Separate br-guest from br-lan
+	iptables -A FORWARD -i br-guest -d $brlanSegment -j DROP
+	########## Prevent uer of Guest network from ping and access the Web server of AP
+	iptables -A INPUT -i br-guest -p icmp -d $GuestIP -j DROP
+	iptables -A INPUT -i br-guest -p tcp --dport 80 -d $GuestIP -j DROP
+	########## Prevent uer of Guest network from SSH , Telnet, HTTPS, SNMP and Locator of AP
+	iptables -A INPUT -i br-guest -p tcp --dport 22 -d $GuestIP -j DROP
+	iptables -A INPUT -i br-guest -p tcp --dport 23 -d $GuestIP -j DROP
+	iptables -A INPUT -i br-guest -p tcp --dport 443 -d $GuestIP -j DROP
+	iptables -A INPUT -i br-guest -p udp --dport 161 -d $GuestIP -j DROP
+	iptables -A INPUT -i br-guest -p udp --dport 51688 -d $GuestIP -j DROP
+	iptables -A INPUT -i br-guest -d $brlanIP -j DROP
+fi
+

@@ -1,0 +1,32 @@
+Purpose :
+	Append HWID and encode or decode image
+
+
+Command :
+	usage: head [-h?] 	-h		this help
+	-s		Source file
+	-d		Destination file
+	-a		Auto set parameter
+	-t		Type : 
+			        bootloader 
+			        kernel     
+			        kernelapp  
+			        apps       
+			        factoryapps :factory app
+			        littleapps :backup application
+			        appdata    :application data
+			        userconfig :configuration data
+			        odmapps       
+			        langpack       
+	-v		Version
+	-x		Recovery MD5 file [-u Magickey]
+	-r		Vendor ID
+	-p		Product ID
+	-z		Zero Padding [-z combined file]
+	-m		Magic Key(32 bits)
+
+
+Example :
+	encode = ./header.x86 -s openwrt-ar71xx-generic-ecb1750-squashfs-sysupgrade.bin -d ecb1750.bin -a
+
+	decode = header -x 

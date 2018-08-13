@@ -1,0 +1,246 @@
+<%+header%>
+<%
+	local uci = luci.model.uci.cursor()
+    local ntm = require "luci.model.network"
+    ntm.init(uci)	
+	local urlblock_table = {}
+	uci:foreach("firewall","urlblock",
+		function(s)
+			if s[".name"]~="urlblock" then		
+				if s[".name"]:match("^urlblock") then
+					urlblock_table[s[".name"]] = s	
+				end
+			end		
+		end)	
+%>
+<script type="text/javascript">
+
+var urlblock_table = (function(){
+	 
+  	var init = function(){
+
+		$(':checkbox[name=\"urlblock.enable\"]').each(function(){
+			 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+			 $(this).attr("checked",enable_status=='1'?true:false);
+			 $(this).click(function(){
+			 	var ev = $(this)[0].checked ?1:0;
+			 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+			 });
+		});
+		$('#add_url').click(function(){
+			if(isFull()){
+			}else if(!urlCheck($("#new_url").val().trim())){
+
+			}else{
+				add($("#new_url").val().trim());
+			}
+		});		
+
+		$('#del_all_btn').click(function(){
+				del_all();
+		});
+
+		$('#del_btn').click(function(){
+				del();
+		});
+  
+		drawTable(); 		
+    },
+    isFull = function(){
+    	return $("#list_urlblock_table").find('tr:hidden').length == 0;
+    },
+    urlCheck = function(p){
+    		if(!p){
+				alert(invalid("<%:URL Blocking%>"));
+				return false;			
+    		}
+    
+			if(hasSpecialChar(p)){
+				alert(invalid("<%:URL Blocking%>"));
+				return false;
+			}
+            if(duplicate_Check(p)){
+                alert("<%:Url string is duplicate%>");
+                return false;
+            }
+
+    	return true;
+    },
+    duplicate_Check = function(p){
+    	var dup_flag = false;
+		$("#list_urlblock_table").find('tr[id^="urlblock"]:visible').each(function(i){
+			$(this).find(':hidden[name$=\".pattern\"]').each(function(){
+				if($(this).val()==p){
+					dup_flag = true;
+					return ;
+				}
+			})		
+		})    	
+		return dup_flag;
+    },    
+    add = function(p){
+	 		var new_urlblock_id =""
+			$("#list_urlblock_table").find('tr:hidden').each(function(){
+				new_urlblock_id = $(this).attr("id");
+				return;
+			})
+			$("#"+new_urlblock_id).show();    
+			$(':hidden[name$=\"'+new_urlblock_id+'.pattern\"]').val(p);	
+  			drawTable();
+    },
+    del = function(){
+			$("#list_urlblock_table").find('tr[id^="urlblock"]:visible').each(function(i){
+
+				if($(this).find(':checkbox')[0].checked){
+					$(this).find(':hidden').each(function(){
+						$(this).val("");
+					})
+					$(this).find(':checkbox').each(function(){
+						$(this).attr('checked', false);
+					})				
+					$(this).hide();							
+				}
+				drawTable();
+			})   
+    },
+    del_all = function(){
+			$("#list_urlblock_table").find('tr[id^="urlblock"]:visible').each(function(i){
+				$(this).find(':hidden').each(function(){
+					$(this).val("");
+				})
+				$(this).find(':checkbox').each(function(){
+					$(this).attr('checked', false);
+				})				
+				$(this).hide();			
+			})    	
+    },    
+    drawTable = function(){
+ 			$("#list_urlblock_table").find('tr[id^="urlblock"]:visible').each(function(i){
+				$(this).find('td:first').text(i+1);
+				$(this).find('td:nth(1)').text($(this).find(':hidden[name$=\"pattern\"]').val());	
+			})
+    },
+    save = function(){
+    };
+
+    return {
+        init :init,
+        isFull:isFull,
+        urlCheck:urlCheck,
+        add: add,
+        del:del,
+        del_all:del_all,
+        drawTable : drawTable,
+        save : save
+    };
+
+}());
+
+$(function() {
+	// $(':radio[name="ip_type"]').click(function(){
+	// 	$("#dyn_select").attr("disabled",$(this).val()=="static");
+	// 	$("#dyn_client").attr("disabled",$(this).val()=="static");
+	// 	$("#dyn_btn").toggle($(this).val()=="dynamic");
+	// 	$("#sta_public").attr("disabled",$(this).val()=="dynamic");
+	// 	$("#sta_client").attr("disabled",$(this).val()=="dynamic");
+	// 	$("#sta_btn").toggle($(this).val()=="static");
+	// }).trigger("click");
+
+	urlblock_table.init();
+
+
+
+
+});
+
+
+
+</script>
+<form action="<%=REQUEST_URI%>" method="post">
+<input type="hidden" name="cbid.firewall.urlblock.enable" value="<%=uci:get('firewall', 'urlblock', 'enable')%>">
+<div class="cbi-map">	
+	<h2>
+		<a>URL block</a>
+	</h2>
+	<fieldset class="cbi-section">
+		<!-- <legend><input type="checkbox"> Enable DMZ</legend> -->
+		<div class="cbi-section-node">
+			<div class="cbi-section-descr"><%:You can block access to certain Web sites for a particular PC by entering either a full URL address or just a keyword of the Web site%></div><br>
+			<div class="cbi-section-descr"><input type="checkbox" name="urlblock.enable" >	<%:Enable URL Blocking%></div>
+			<table id="add_dmz_table" class="cbi-section-table">
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell"></th>
+				</tr>	
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field"><%:URL / keyword%></td>
+					<td class="cbi-value-field"><input type="text" id="new_url"></td>
+					<td class="cbi-value-field"><div style="float:right;"><img id="add_url" class="cbi-image-button" src="/luci-static/resources/cbi/btn-add.png"></div></td>
+				</tr>								
+			</table>
+		</div>
+	</fieldset>		
+<br>
+<hr width="100%" color="#000000">
+<br>	
+	<fieldset class="cbi-section">
+		<legend>Current URL Blocking Table:</legend>
+		<div class="cbi-section-descr"></div>
+		<div class="cbi-section-node">
+			<table id="list_urlblock_table" class="cbi-section-table" >
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:NO.%></th>
+					<th class="cbi-section-table-cell"><%:URL / keyword%></th>
+					<th class="cbi-section-table-cell"><%:Select%></th>
+				</tr>	
+
+<%
+				for k, v in pairs(urlblock_table) do
+					if v["pattern"] ~= nil then
+
+%>
+
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" >
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox">
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.pattern' value='<%=v["pattern"]%>'>
+					</td>
+				</tr>	
+
+<%
+					else
+%>
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" style="display:none">
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox">
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.pattern' value='<%=v["pattern"]%>'>
+					</td>
+				</tr>					
+
+<%
+					end	
+				end
+%>
+
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field" colspan="2"><div style="float:left;"><input class="cbi-button " type="button" value="Delete Selected" id="del_btn">		<input class="cbi-button " type="button" value="Delete All" id="del_all_btn" >	</div></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+				</tr>	
+			</table>
+		</div>
+	</fieldset>
+<div class="cbi-page-actions">
+	<input class="cbi-button cbi-button-apply" type="submit" value="Save & Apply" name="cbi.apply">
+	<input class="cbi-button cbi-button-save" type="submit" value="Save">
+	<input class="cbi-button cbi-button-reset" type="reset" value="Reset">
+	<script type="text/javascript">cbi_d_update();</script>
+</div>	
+</div>
+</form>
+<%+footer%>

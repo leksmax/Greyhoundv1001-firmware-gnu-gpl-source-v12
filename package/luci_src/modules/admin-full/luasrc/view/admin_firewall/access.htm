@@ -1,0 +1,848 @@
+<%+header%>
+<%
+	local uci = luci.model.uci.cursor()
+    local ntm = require "luci.model.network"
+    ntm.init(uci)	
+	local mac_filter_table = {}
+	local ip_filter_table = {}
+	uci:foreach("firewall","accesscontrol",
+		function(s)
+			if s[".name"]~="macfiltering" and s[".name"]~="ipfiltering" then
+				if s[".name"]:match("^macfiltering") then
+					mac_filter_table[s[".name"]] = s	
+				end
+				if s[".name"]:match("^ipfiltering") then
+					ip_filter_table[s[".name"]] = s	
+				end						
+			end
+		end)	
+%>
+<script type="text/javascript">
+
+var mac_filter_table = (function(){
+	var dut_mac=[], 
+		mac_filter_enable,mac_filter_policy="0",
+  	init = function(){
+		<%
+		    local dut_mac = luci.util.split(luci.util.exec("ifconfig | grep HWaddr | awk '{print $1}'"))
+		    for n = 1 ,#dut_mac do
+		%>
+		    dut_mac.push('<%=ntm:get_mac(dut_mac[n])%>');
+		<%
+		    end    
+		%>
+  		mac_filter_policy = '<%=uci:get("firewall", "macfiltering", "policy")%>'||mac_filter_policy;
+  		$(':radio[name$=\"macfiltering.policy\"][value=\"'+mac_filter_policy+'\"]').attr("checked",true);
+
+		$(':checkbox[name=\"macfiltering.enable\"]').each(function(){
+			 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+			 $(this).attr("checked",enable_status=='1'?true:false);
+			 $(this).click(function(){
+			 	var ev = $(this)[0].checked ?1:0;
+			 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+			 });
+		});
+		$('#mac_add_btn').click(function(){
+			if(mac_filter_table.isFull()){
+			}else if(!mac_filter_table.macCheck($("#new_mac").val())){
+
+			}else{
+				mac_filter_table.add($("#new_mac").val(),$("#new_comment").val());
+			}
+		});
+
+		$('#mac_del_btn').click(function(){
+			del();
+		});
+
+		$('#mac_del_all_btn').click(function(){
+			del_all();
+		});
+
+		drawTable(); 		
+    },
+    isFull = function(){
+    	return $("#list_mac_filter_table").find('tr:hidden').length == 0;
+    },
+    macCheck = function(mac){
+    	var reg = /^([0-9A-F][0,2,4,6,8,A,C,E][:-])([0-9A-F]{2}[:-]){4}([0-9A-F]{2})$/;
+	    if(reg.test(mac.toUpperCase())==false){
+			alert("<%:Wrong Mac address%>");
+			return false;    	
+	    }
+
+        if(lanCheck(mac)){
+            alert("<%:Duplicate LAN MAC address.%>");
+            return false;
+        }
+
+        if(duplicate_Check(mac)){
+            alert("<%:Dublicate MAC address in MAC Filtering  table.%>");
+            return false;
+        }
+    	return true;
+    },
+    lanCheck = function(mac){
+    	return  jQuery.inArray( mac, dut_mac)>-1?true:false;
+    },
+    duplicate_Check = function(mac){
+    	var dup_flag = false;
+		$("#list_mac_filter_table").find('tr[id^="macfiltering"]:visible').each(function(i){
+			$(this).find(':hidden[name$=\".macaddr\"]').each(function(){
+				if($(this).val()==mac){
+					dup_flag = true;
+					return ;
+				}
+			})		
+		})    	
+		return dup_flag;
+    },    
+    add = function(mac,comment){
+	 		var new_mac_id =""
+			$("#list_mac_filter_table").find('tr:hidden').each(function(){
+				new_mac_id = $(this).attr("id");
+				return;
+			})
+			$("#"+new_mac_id).show();    
+			$(':hidden[name$=\"'+new_mac_id+'.macaddr\"]').val(mac);	
+			$(':hidden[name$=\"'+new_mac_id+'.comment\"]').val(comment);	
+  			drawTable();
+    },
+    del = function(){
+			$("#list_mac_filter_table").find('tr[id^="macfiltering"]:visible').each(function(i){
+
+				if($(this).find(':checkbox')[0].checked){
+					$(this).find(':hidden').each(function(){
+						$(this).val("");
+					})
+					$(this).find(':checkbox').each(function(){
+						$(this).attr('checked', false);
+					})				
+					$(this).hide();							
+				}
+				drawTable();
+			})   
+    },
+    del_all = function(){
+			$("#list_mac_filter_table").find('tr[id^="macfiltering"]:visible').each(function(i){
+				$(this).find(':hidden').each(function(){
+					$(this).val("");
+				})
+				$(this).find(':checkbox').each(function(){
+					$(this).attr('checked', false);
+				})				
+				$(this).hide();			
+			})    	
+    },    
+    drawTable = function(){
+ 			$("#list_mac_filter_table").find('tr[id^="macfiltering"]:visible').each(function(i){
+				$(this).find('td:first').text(i+1);
+				$(this).find('td:nth(1)').text($(this).find(':hidden[name$=\"macaddr\"]').val());	
+				$(this).find('td:nth(2)').text($(this).find(':hidden[name$=\"comment\"]').val());	
+			})
+    },
+    save = function(){
+    };
+
+    return {
+        init :init,
+        isFull:isFull,
+        macCheck:macCheck,
+        add: add,
+        del:del,
+        del_all:del_all,
+        drawTable : drawTable,
+        save : save
+    };
+
+}());
+
+var ip_filter_table = (function(){
+	var serviceTable = [
+		"<%:WWW%>",
+		"<%:E-mail Sending%>",
+		"<%:News Forums%>",
+		"<%:E-mail Receiving%>",
+		"<%:Secure HTTP%>",
+		"<%:File Transfer%>",
+		"<%:MSN Messenger%>",
+		"<%:Telnet Service%>",
+		"<%:AIM%>",
+		"<%:NetMeeting%>",
+		"<%:DNS%>",
+		"<%:SNMP%>",
+		"<%:VPN-PPTP%>",
+		"<%:VPN-L2TP%>",
+		"<%:TCP%>",
+		"<%:UDP%>"
+		],
+		 serviceDescrTable = [
+		"<%:HTTP, TCP Port 80, 3128, 8000, 8080, 808%>",
+		"<%:SMTP, TCP Port 25%>",
+		"<%:NNTP, TCP Port 119%>",
+		"<%:POP3, TCP Port 110%>",
+		"<%:HTTPS, TCP Port 443%>",
+		"<%:FTP, TCP Port 21%>",
+		"<%:TCP Port 1863%>",
+		"<%:TCP Port 23%>",
+		"<%:AOL Instant Messenger, TCP Port 5190%>",
+		"<%:H.323, TCP Port 389,522,1503,1720,1731%>",
+		"<%:UDP Port 53%>",
+		"<%:UDP Port 161, 162%>",
+		"<%:TCP Port 1723%>",
+		"<%:UDP Port 1701%>",
+		"<%:All TCP Port%>",
+		"<%:All UDP Port%>"
+		],		
+		serviceTCPPortTable = [
+		"80, 3128, 8000, 8080, 8081",
+		"25",
+		"119",
+		"110",
+		"443",
+		"21",
+		"1863",
+		"23",
+		"5190",
+		"389,522,1503,1720,1731",
+		"",
+		"",
+		"1723",
+		"",
+		"All TCP Port",
+		""
+		],
+		serviceUDPPortTable = [
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"53",
+		"161, 162",
+		"",
+		"1701",
+		"",
+		"All UDP Port"
+		],
+		protocolTable = [
+		"<%:TCP%>",
+		"<%:UDP%>",
+		"<%:BOTH%>"
+		],		
+		ip_filter_enable,ip_filter_policy="0",
+		lan_proto = "<%=uci:get('network', 'lan', 'proto')%>", 
+			lan_ip,
+			lan_mask,
+  	init = function(){
+
+		if(lan_proto == "dhcp")
+		{
+			lan_ip='<%=ntm.init():get_network("lan"):ipaddr()%>';
+			lan_mask = '<%=ntm.init():get_network("lan"):netmask()%>';
+			if(lan_ip=="" || lan_mask==""){
+				lan_ip='<%=uci:get("network", "lan", "ipaddr")%>';
+				lan_mask = '<%=uci:get("network", "lan", "netmask")%>';
+			}
+		}
+		else
+		{
+			lan_ip='<%=uci:get("network", "lan", "ipaddr")%>';
+			lan_mask = '<%=uci:get("network", "lan", "netmask")%>';
+		} 
+
+  		ip_filter_policy = '<%=uci:get("firewall", "ipfiltering", "policy")%>'||ip_filter_policy;
+  		$(':radio[name$=\"ipfiltering.policy\"][value=\"'+ip_filter_policy+'\"]').attr("checked",true);
+
+		$(':checkbox[name=\"ipfiltering.enable\"]').each(function(){
+			 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+			 $(this).attr("checked",enable_status=='1'?true:false);
+			 $(this).click(function(){
+			 	var ev = $(this)[0].checked ?1:0;
+			 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+			 });
+		});
+
+
+	$('#ip_add_btn').click(function(){
+
+		
+		if(isFull()){
+		}else if(!lanCheck($('#new_headip').val(),$('#new_tailip').val())){
+		
+		}else if(!serviceCheck()){
+
+		}else if(!userserviceCheck($('#new_headport').val(),$('#new_tailport').val())){
+
+		}else{
+			add($('#new_description').val(),$('#new_headip').val(),$('#new_tailip').val(),getServiceStr(),$('#new_protocol').val(),$('#new_headport').val(),$('#new_tailport').val());
+		}
+	});
+		$('#ip_del_btn').click(function(){
+			del();
+		});
+
+		$('#ip_del_all_btn').click(function(){
+			del_all();
+		});
+
+		initServiceTable()
+		drawTable(); 
+    },
+    isFull = function(){
+    	return $("#list_ip_filter_table").find('tr:hidden').length == 0;
+    },
+    lanCheck = function(h,t){
+   
+			if(!isIpaddr(h)){
+				alert(invalid("<%:Client PC ip address%>"));
+				return false;
+			}
+            if(isMulticast(h)){
+                alert("<%: ip address cannot be a multicast ip address.%>");
+                return false;
+            }
+            if(isLinklocal(h)){
+                alert("<%:Client PC ip address cannot be a linklocal ip address.%>");
+                return false;
+            }
+            if(isLoopback(h)){
+                alert("<%:Client PC ip address cannot be a loopback ip address.%>");
+                return false;
+            }
+			if(!isSameSubnet(lan_ip, lan_mask, h)){
+				alert(invalid("<%:It should be set within the current subnet. Now our LAN IP is %>"+lan_ip));
+				return false;
+			}            
+    	
+
+    	if(t&&(t!=h)){
+				if(!isIpaddr(t)){
+					alert(invalid("<%:Public PC ip address%>"));
+					return false;
+				}
+	            if(isMulticast(t)){
+	                alert("<%:Public PC ip address cannot be a multicast ip address.%>");
+	                return false;
+	            }
+	            if(isLinklocal(t)){
+	                alert("<%:Public PC ip address cannot be a linklocal ip address.%>");
+	                return false;
+	            }
+	            if(isLoopback(t)){
+	                alert("<%:Public PC ip address cannot be a loopback ip address.%>");
+	                return false;
+	            }
+				if(!isSameSubnet(lan_ip, lan_mask, t)){
+					alert(invalid("<%:It should be set within the current subnet. Now our LAN IP is %>"+lan_ip));
+					return false;
+				}
+
+				if(!checkClientRange(h,t)){
+					alert("<%:Invalid ip start-end pair%>");
+					return false;				
+				} 
+	        }
+
+	        if((t==h)||(t=="")){
+            	if(duplicate_Check(h)){
+            		alert("<%:Dublicate ip address in IP filtering table.%>");
+          	 		return false;
+	            }   
+	        }else{
+            	if(duplicate_Check(h,t)){
+            		alert("<%:Dublicate ip address in IP filtering table.%>");
+          	 		return false;
+	            } 	        	
+	        }
+
+
+
+    	return true;
+    },
+    serviceCheck = function(){
+    	if(getServiceStr().indexOf("1")==-1){
+    		alert("<%:Please select at least one service.%>");
+    		return false
+    	}
+    	return true;
+    },
+    userserviceCheck = function(headport,tailport){
+    	if(headport){
+	    	if(!isBetween(headport,0,65535)){
+	    		alert(invalid("Port number")+"<%:You should set a value between 1-65535.%>");
+	    		return false;
+	    	}   		
+    	}
+
+    	if(tailport){
+	    	if(!isBetween(tailport,0,65535)){
+	    		alert(invalid("Port number")+"<%:You should set a value between 1-65535.%>");
+	    		return false;
+	    	}    		
+    	}
+
+    	if(!headport&&tailport){
+    		alert("<%:Start Port should not be empty.%>");
+    		return false
+    	}
+
+    	if(headport&&tailport){
+    		if(!isBetween(tailport,headport,65535)){
+	    		alert(invalid("Port range")+"<%:1st port value should be less than 2nd value.%>");
+	    		return false    			
+    		}
+    	}
+    	return true;
+    },  	  
+    duplicate_Check = function(headipaddr,tailipaddr){
+    	var dup_flag = false;
+		$("#list_ip_filter_table").find('tr[id^="ipfiltering"]:visible').each(function(){
+
+			var dup_headip_flag = false, dup_tailip_flag = false;
+			$(this).find(':hidden[name$=\".headipaddr\"]').each(function(){
+				if($(this).val()==headipaddr){
+					dup_headip_flag = true;
+					return ;
+				}
+			});
+
+			if(tailipaddr){
+				$(this).find(':hidden[name$=\".tailipaddr\"]').each(function(){	
+					if($(this).val()==tailipaddr){
+						dup_tailip_flag = true;
+						return ;
+					}
+				});
+			}else{
+				$(this).find(':hidden[name$=\".tailipaddr\"]').each(function(){	
+					if($(this).val()==""){
+						dup_tailip_flag = true;
+						return ;
+					}
+				});				
+			}					
+
+			if(dup_headip_flag&&dup_tailip_flag){
+				dup_flag = true ;
+				return;
+			}
+
+		});
+		return	dup_flag;
+
+    },    
+    add = function(description,headipaddr,tailipaddr,service_str,protocol,headport,tailport){
+	 		var new_ip_id =""
+			$("#list_ip_filter_table").find('tr:hidden').each(function(){
+				new_ip_id = $(this).attr("id");
+				return;
+			})
+			$("#"+new_ip_id).show();   
+
+			protocol = headport?protocol:"";
+			tailport = (headport!=tailport)?tailport:"";
+			tailipaddr = (headipaddr!=tailipaddr)?tailipaddr:"";
+
+			$(':hidden[name$=\"'+new_ip_id+'.description\"]').val(description);	
+			$(':hidden[name$=\"'+new_ip_id+'.headipaddr\"]').val(headipaddr);	
+			$(':hidden[name$=\"'+new_ip_id+'.tailipaddr\"]').val(tailipaddr);	
+			$(':hidden[name$=\"'+new_ip_id+'.defaultservice\"]').val(service_str);	
+			$(':hidden[name$=\"'+new_ip_id+'.protocol\"]').val(protocol);	
+			$(':hidden[name$=\"'+new_ip_id+'.headport\"]').val(headport);	
+			$(':hidden[name$=\"'+new_ip_id+'.tailport\"]').val(tailport);	
+  			drawTable();
+    },
+    del = function(){
+			$("#list_ip_filter_table").find('tr[id^="ipfiltering"]:visible').each(function(i){
+
+				if($(this).find(':checkbox')[0].checked){
+					$(this).find(':hidden').each(function(){
+						$(this).val("");
+					})
+					$(this).find(':checkbox').each(function(){
+						$(this).attr('checked', false);
+					})				
+					$(this).hide();							
+				}
+				drawTable();
+			})   
+    },
+    del_all = function(){
+			$("#list_ip_filter_table").find('tr[id^="ipfiltering"]:visible').each(function(i){
+				$(this).find(':hidden').each(function(){
+					$(this).val("");
+				})
+				$(this).find(':checkbox').each(function(){
+					$(this).attr('checked', false);
+				})				
+				$(this).hide();			
+			})    	
+    },
+    drawIp = function(headIp,tailIp){
+    	if(headIp){
+    		return ((headIp == tailIp)||tailIp=="")?headIp:headIp+" - "+tailIp;
+    	}
+    	
+    },
+    drawService = function(service,headPort){
+    	var service_str = "";
+    	for(var i=0;i<service.length;i++){
+    		service_str+= service[i]=="1"?'<div style="margin:5px;">'+serviceTable[i]+'</div>':"";
+    	}    	
+	  	if(headPort){
+			service_str+= '<div style="margin:5px;"><%:User Define%></div>';
+		}
+    	return service_str;
+    },
+    drawProtocol = function(protocol){
+    	return protocolTable[protocol];
+    },
+    drawPort = function(service,protocol,headPort,tailPort){
+    	var port_str = "",tcp_str="",udp_str="",usr_port_str="";
+    	for(var i=0;i<service.length;i++){
+    		tcp_str+= service[i]=="1"&&serviceTCPPortTable[i]?serviceTCPPortTable[i]+", ":"";
+    		udp_str+= service[i]=="1"&&serviceUDPPortTable[i]?serviceUDPPortTable[i]+", ":"";
+    	}
+
+	  	if(headPort){
+			usr_port_str =  ((headPort == tailPort)||tailPort=="")?headPort:headPort+" - "+tailPort;
+		}
+		switch (protocol)
+		{
+			case "0":
+				tcp_str+= usr_port_str;
+				break;
+			case "1":
+				udp_str+= usr_port_str;
+				break;
+			case "2":
+				tcp_str+= usr_port_str;
+				udp_str+= usr_port_str;
+		}
+
+
+    	tcp_str = (service[14] == "1")?serviceTCPPortTable[14]:tcp_str;
+    	udp_str = (service[15] == "1")?serviceUDPPortTable[15]:udp_str;
+
+    	
+		tcp_str = tcp_str.slice(-2,-1)==","?tcp_str.substring(0, tcp_str.length - 2):tcp_str;
+		udp_str = udp_str.slice(-2,-1)==","?udp_str.substring(0, udp_str.length - 2):udp_str;
+    	
+
+
+    	port_str += (tcp_str)?'<div style="margin:5px;"> TCP Port='+tcp_str+'</div>':"";
+    	port_str += (udp_str)?'<div style="margin:5px;"> UDP Port='+udp_str+'</div>':"";
+
+    	return port_str;
+    },
+    getServiceStr = function(){
+    	var service_str = "";
+		$(':checkbox[name^=\"service_\"]').each(function(){
+			service_str += $(this)[0].checked ?1:0;
+		});
+		return service_str;
+    },
+    initServiceTable = function(){
+    		var str = "";
+			for(var i=0 ;i <serviceTable.length;i++){
+				str+='<tr class=\"cbi-section-table-row\">';
+				str+='<td class="cbi-value-field">'+serviceTable[i]+'</td>';
+				str+='<td class="cbi-value-field">'+serviceDescrTable[i]+'</td>';
+				str+='<td class="cbi-value-field"><input type=\"checkbox\" name=\"service_'+i+'\" ></td></tr>';
+			}	
+			$('#ip_service_table').append(str);
+    },                
+    drawTable = function(){
+ 			$("#list_ip_filter_table").find('tr[id^="ipfiltering"]:visible').each(function(i){
+				$(this).find('td:first').text(i+1);
+				$(this).find('td:nth(1)').text($(this).find(':hidden[name$=\"description\"]').val());	
+				$(this).find('td:nth(2)').text(drawIp($(this).find(':hidden[name$=\"headipaddr\"]').val(),$(this).find(':hidden[name$=\"tailipaddr\"]').val()));
+				$(this).find('td:nth(3)').html(drawService($(this).find(':hidden[name$=\"defaultservice\"]').val(),$(this).find(':hidden[name$=\"headport\"]').val()));
+				$(this).find('td:nth(4)').text(drawProtocol($(this).find(':hidden[name$=\"protocol\"]').val()));
+				$(this).find('td:nth(5)').html(drawPort($(this).find(':hidden[name$=\"defaultservice\"]').val(),$(this).find(':hidden[name$=\"protocol\"]').val(),$(this).find(':hidden[name$=\"headport\"]').val(),$(this).find(':hidden[name$=\"tailport\"]').val()));
+			})
+    },
+    save = function(){
+    };
+
+    return {
+        init :init,
+        isFull:isFull,
+        lanCheck:lanCheck,
+        userserviceCheck:userserviceCheck,
+        serviceCheck:serviceCheck,
+        getServiceStr:getServiceStr,
+        add: add,
+        del:del,
+        del_all:del_all,
+        drawTable : drawTable,
+        save : save
+    };
+
+}());
+
+$(function() {
+	// $(':radio[name="ip_type"]').click(function(){
+	// 	$("#dyn_select").attr("disabled",$(this).val()=="static");
+	// 	$("#dyn_client").attr("disabled",$(this).val()=="static");
+	// 	$("#dyn_btn").toggle($(this).val()=="dynamic");
+	// 	$("#sta_public").attr("disabled",$(this).val()=="dynamic");
+	// 	$("#sta_client").attr("disabled",$(this).val()=="dynamic");
+	// 	$("#sta_btn").toggle($(this).val()=="static");
+	// }).trigger("click");
+	
+
+	mac_filter_table.init();
+
+
+
+	ip_filter_table.init();
+
+
+	$('input[id$="_ip_btn"]').click(function(){
+		$("#ip_field").toggle($(this).attr("id").indexOf("edit")>-1);
+		// $("#ip_list_field").toggle($(this).attr("id").indexOf("edit")<0);
+		 $("#edit_ip_btn").toggle($(this).attr("id").indexOf("edit")<0);		
+	});
+
+	$('input[id$="_mac_btn"]').click(function(){
+		$("#mac_field").toggle($(this).attr("id").indexOf("edit")>-1);
+		// $("#mac_list_field").toggle($(this).attr("id").indexOf("edit")<0);	
+		 $("#edit_mac_btn").toggle($(this).attr("id").indexOf("edit")<0);		
+	});
+
+
+  // $( "form" ).submit(function(){
+  // 	var ev = $("#dmz_enable")[0].checked ?1:0;
+		// $("form").append('<input type="hidden"  name="cbid.firewall.dmz.enable" value="'+ev+'">');  		
+  // });  	
+
+});
+
+
+
+</script>
+
+<form action="<%=REQUEST_URI%>" method="post">
+<input type="hidden" name="cbid.firewall.macfiltering.enable" value="<%=uci:get('firewall', 'macfiltering', 'enable')%>">
+<input type="hidden" name="cbid.firewall.ipfiltering.enable" value="<%=uci:get('firewall', 'ipfiltering', 'enable')%>">
+<div class="cbi-map">	
+	<h2>
+		<a>Access</a>
+	</h2>
+	<fieldset class="cbi-section" id="mac_field" style="display:none">
+		<!-- <legend></legend> -->
+		<div class="cbi-section-node">
+			<table id="add_mac_filter_table" class="cbi-section-table">
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:New MAC filtering entry:%></th>
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell"></th>
+				</tr>
+				<tr class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Client PC MAC Address%></td>
+					<td class="cbi-value-field"><input type="text" id="new_mac"></td>
+					<td class="cbi-value-field"></td>
+				</tr>
+				<tr class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Comment%></td>
+					<td class="cbi-value-field"><input type="text" id="new_comment"></td>
+					<td class="cbi-value-field"></td>
+				</tr>
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"><div style="float:right;"><img id="mac_add_btn" class="cbi-image-button" src="/luci-static/resources/cbi/btn-add.png"><input class="cbi-button " id="back_to_mac_btn" type="button" value="Hide" ></div></td>
+				</tr>															
+			</table>
+		</div>
+	</fieldset>
+			
+	<fieldset class="cbi-section" id="mac_list_field">
+		<legend><%:MAC Filtering table:%></legend>
+		<div class="cbi-section-descr">
+			<div class="cbi-section-descr">
+				<input type="checkbox"  name="macfiltering.enable"> Enable MAC filtering	
+				<input type="radio"  name="cbid.firewall.macfiltering.policy" value="0">	<%:Deny%>
+				<input type="radio"  name="cbid.firewall.macfiltering.policy" value="1">	<%:Allow%>
+			</div>
+		</div>
+		<div class="cbi-section-node">
+			<table id="list_mac_filter_table" class="cbi-section-table" >
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:NO.%></th>
+					<th class="cbi-section-table-cell"><%:Client PC MAC Address%></th>
+					<th class="cbi-section-table-cell"><%:Comment%></th>
+					<th class="cbi-section-table-cell"><%:Select%></th>
+				</tr>	
+
+<%
+				for k, v in pairs(mac_filter_table) do
+					
+%>
+
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" <%if v["macaddr"] == nil then%> style="display:none"<%end%> >
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox">
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.macaddr' value='<%=v["macaddr"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.comment' value='<%=v["comment"]%>'>						
+					</td>
+				</tr>					
+
+<%						
+				end
+%>
+
+				<tr class="cbi-section-table-row-last">
+					<td colspan="2" class="cbi-value-field"><div style="float:left;"><input id="edit_mac_btn" class="cbi-button " type="button" value="Add" >		<input class="cbi-button " type="button" value="Delete Selected" id="mac_del_btn" >		<input class="cbi-button " type="button" value="Delete All" id="mac_del_all_btn"  >	</div></td>
+					<td class="cbi-value-field"></td>
+					<td  class="cbi-value-field"></td>
+				</tr>	
+			</table>
+		</div>
+	</fieldset>
+	<fieldset class="cbi-section" id="ip_field" style="display:none">
+		<div class="cbi-section-node">
+			<div id="add_ip_filter_div">
+			<table  class="cbi-section-table">
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:New IP filtering entry:%></th>
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell"></th>
+				</tr>
+				<tr class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Client PC Description%></td>
+					<td class="cbi-value-field"><input type="text" id="new_description"></td>
+					<td class="cbi-value-field"></td>
+				</tr>					
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field"><%:Client PC IP Address%></td>
+					<td class="cbi-value-field"><input type="text" id="new_headip"> - <input type="text" id="new_tailip"></td>
+					<td class="cbi-value-field"></td>
+				</tr>												
+			</table>
+			<br>
+			<table id="ip_service_table" class="cbi-section-table">
+				<div class="cbi-section-descr"><%:Client Service:%></div>
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:Service Name%></th>
+					<th class="cbi-section-table-cell"><%:Detail Description%></th>
+					<th class="cbi-section-table-cell"><%:Select%></th>
+				</tr>
+
+
+
+			</table>
+			<br>				
+			<table class="cbi-section-table">
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:User Define Service:%></th>
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell"></th>
+				</tr>
+				<tr class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Protocol%></td>
+					<td class="cbi-value-field">
+						<select id="new_protocol">
+							<option value="2">Both</option>
+							<option value="1">UDP</option>
+							<option value="0">TCP</option>
+						</select>
+					</td>
+					<td class="cbi-value-field"></td>
+				</tr>					
+				<tr class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Port range%></td>
+					<td class="cbi-value-field"><input type="text" id="new_headport"> - <input type="text" id="new_tailport"></td>
+					<td class="cbi-value-field"></td>
+				</tr>
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"><div style="float:right;"><img id="ip_add_btn" class="cbi-image-button" src="/luci-static/resources/cbi/btn-add.png"><input class="cbi-button" id="back_to_ip_btn"  type="button" value="Hide" ></div></td>
+				</tr>												
+			</table>
+			</div>			
+		</div>
+	</fieldset>		
+<br>
+<hr width="100%" color="#000000">
+<br>	
+	<fieldset class="cbi-section" id="ip_list_field">
+		<legend><%:IP Filtering table:%></legend>
+		<div class="cbi-section-descr">			
+			<div class="cbi-section-descr">
+				<input type="checkbox"  name="ipfiltering.enable"> Enable IP filtering	
+				<input type="radio"  name="cbid.firewall.ipfiltering.policy" value="0">	<%:Deny%>
+				<input type="radio"  name="cbid.firewall.ipfiltering.policy" value="1">	<%:Allow%>
+			</div>
+		</div>
+		<div class="cbi-section-node">
+			<table id="list_ip_filter_table" class="cbi-section-table" >
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:NO.%></th>
+					<th class="cbi-section-table-cell"><%:PC Description%></th>
+					<th class="cbi-section-table-cell"><%:PC IP Address%></th>
+					<th class="cbi-section-table-cell"><%:Client Service%></th>
+					<th class="cbi-section-table-cell"><%:Protocol%></th>
+					<th class="cbi-section-table-cell"><%:Port range%></th>
+					<th class="cbi-section-table-cell"><%:Select%></th>
+				</tr>	
+
+<%
+				for k, v in pairs(ip_filter_table) do
+					
+%>
+
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" <%if v["headipaddr"] == nil then%> style="display:none"<%end%> >
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox">
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.description' value='<%=v["description"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.headipaddr' value='<%=v["headipaddr"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.tailipaddr' value='<%=v["tailipaddr"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.defaultservice' value='<%=v["defaultservice"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.protocol' value='<%=v["protocol"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.headport' value='<%=v["headport"]%>'>	
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.tailport' value='<%=v["tailport"]%>'>													
+					</td>
+				</tr>					
+
+<%						
+				end
+%>
+
+				<tr class="cbi-section-table-row-last">
+					<td colspan="2" class="cbi-value-field"><div style="float:left;"><input id="edit_ip_btn" class="cbi-button " type="button" value="Add" >		<input class="cbi-button " type="button" value="Delete Selected" id="ip_del_btn" >		<input class="cbi-button " type="button" value="Delete All" id="ip_del_all_btn"  >	</div></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td  class="cbi-value-field"></td>
+				</tr>	
+			</table>
+		</div>
+	</fieldset>	
+<div class="cbi-page-actions">
+	<input class="cbi-button cbi-button-apply" type="submit" value="Save & Apply" name="cbi.apply">
+	<input class="cbi-button cbi-button-save" type="submit" value="Save">
+	<input class="cbi-button cbi-button-reset" type="reset" value="Reset">
+	<script type="text/javascript">cbi_d_update();</script>
+</div>	
+</div>
+</form>
+<%+footer%>

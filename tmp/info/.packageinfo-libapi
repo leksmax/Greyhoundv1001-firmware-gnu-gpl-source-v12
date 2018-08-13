@@ -1,0 +1,18 @@
+Source-Makefile: package/libapi/Makefile
+Package: libapi
+Version: 0.0.1-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +liblua +libuci +libpcre
+Menu-Depends: 
+Provides: 
+Build-Variant: libapi
+Section: libs
+Category: Libraries
+Title: API Library (include lua plugin)
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: libapi-0.0.1.tar.gz
+Type: ipkg
+Description:   API Library (include lua plugin).
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

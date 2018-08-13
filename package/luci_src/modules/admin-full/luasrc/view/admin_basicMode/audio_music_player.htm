@@ -1,0 +1,118 @@
+<%+header%>
+<%
+	local uci = luci.model.uci.cursor()
+    local ntm = require "luci.model.network"
+    ntm.init(uci)	
+%>
+<script type="text/javascript">
+// var checkRule= (function(){
+//     var checkResult = true,
+//     statrtCheck = function(){
+// 		if(burst_check()){
+// 			$('form').submit();
+// 		}
+// 		return false;
+//     },
+//     burst_check = function(){
+//     	var flag = true;
+    	
+//     	$(':text[name^=\"cbid.firewall.\"]').each(function(){
+//     		if(!isNumber($(this).val())){
+//     			flag = false;
+//     			$(this).focus();
+//     			alert(invalid("<%:It should be a decimal number:0-9%>"));
+//     			return;
+//     		}
+//     	});
+//     	return flag;
+//     }
+//     return{
+//         check : statrtCheck
+//     };
+
+// }());
+
+$(function() {
+	$('.off').each(function(){
+		$(this).click(function(){
+			$(this).next('.on').show();
+			$(this).hide();
+		})
+	});
+	$('.on').each(function(){
+		$(this).click(function(){
+			$(this).prev('.off').show();
+			$(this).hide();
+		})
+	});	
+// 	$(':checkbox[name^=\"dos\"]').each(function(){
+// 		 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+// 		 $(this).attr("checked",enable_status=='1'?true:false);
+// 		 $(this).click(function(){
+// 		 	var ev = $(this)[0].checked ?1:0;
+// 		 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+// 		 });
+// 	});
+
+//   	$(':checkbox[name$=\"pingofdeath\"]').click(function(){
+//   		var is_checked = $(this)[0].checked ;
+//   		$('#ping_tr div').children().each(function(){
+// 			$(this).attr("disabled",!is_checked);		  			
+//   		});
+//   	}).triggerHandler("click");
+
+//   	$(':checkbox[name$=\"syncflood\"]').click(function(){
+//   		var is_checked = $(this)[0].checked ;
+//   		$('#syn_tr div').children().each(function(){
+// 			$(this).attr("disabled",!is_checked);		  			
+//   		});
+//   	}).triggerHandler("click");
+
+//   	$(':checkbox[name$=\"portscan\"]').click(function(){
+//   		var is_checked = $(this)[0].checked ;
+//   		$('#port_tr div').children().each(function(){
+// 			$(this).attr("disabled",!is_checked);		  			
+//   		});
+//   	}).triggerHandler("click");
+
+});
+
+
+
+</script>
+<form action="<%=REQUEST_URI%>" method="post">
+<div class="cbi-map">	
+<!-- 	<h2>
+		<a>Storage Settings</a>
+	</h2> -->
+	<fieldset class="cbi-section">
+		<div class="cbi-section-node">
+			<div class="cbi-section-descr">Settings</div>
+			<table id="storage_table"  class="cbi-section-table" width="100%" >
+				<tr  class="cbi-section-table-row">
+					<td class="cbi-value-field">S/pdif</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/form-switch-off-grey.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/form-switch-on-grey.png" >
+					</td>
+					<td class="cbi-value-field"><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+				</tr>						
+				<tr  class="cbi-section-table-row-last">
+					<td class="cbi-value-field">Audio Jack</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/form-switch-off-grey.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/form-switch-on-grey.png" >
+					</td>
+					<td class="cbi-value-field"><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+				</tr>				
+																								
+			</table>
+		</div>
+	<div class="cbi-page-actions" >
+		<input class="cbi-button cbi-button-save" type="button"  value="Edit">		
+		<script type="text/javascript">cbi_d_update();</script>
+	</div>			
+	</fieldset>
+</div>
+</form>
+<%+footer%>

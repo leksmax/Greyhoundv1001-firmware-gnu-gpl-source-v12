@@ -1,0 +1,21 @@
+<%+header%>
+<%
+	local disp = require "luci.dispatcher"
+
+%>
+<script>
+
+		$(document).ready(function(){
+			basic_icon_model.renderBasicIcon();
+			$(".Container_Button").each(function(){
+				$(this).click(function(){
+					location.href= $(this).attr("entry");
+				})
+			}).hover(function(){	
+				$(this).toggleClass('Container_Button_hover');
+			});
+		});						
+</script>
+	<table id="basic_mode_icon_tbl" cellspacing="30" cellpadding="0" >
+	</table>	
+<%+footer%>

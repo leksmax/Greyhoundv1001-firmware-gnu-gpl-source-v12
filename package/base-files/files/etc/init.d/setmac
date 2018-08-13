@@ -1,0 +1,62 @@
+#!/bin/sh /etc/rc.common
+
+START=10
+
+wifi0_mac_file="/tmp/wifi0_mac.txt"
+wifi1_mac_file="/tmp/wifi1_mac.txt"
+error_msg="/tmp/invalid_mac.txt"
+
+# char() - converts decimal value to its ASCII character
+# A-Z = 65-90
+char() {
+	[ ${1} -lt 91 ] || return 1
+	printf \\$(printf '%03o' $1)
+}
+
+# decimal() - converts ASCII character to its decimal value
+decimal() {
+	LC_CTYPE=C printf '%d' "'$1"
+}
+
+boot() {
+	local lan_mac=$(setconfig -g 6)
+	local front_mac=$(echo $lan_mac | cut -c 1-16)
+	local lastchar=$(echo $lan_mac | cut -c 17-17)
+	local tmp=$(decimal $lastchar)
+	local invalid=0
+
+	if [ ${tmp} -lt 58 -a ${tmp} -gt 47 ]; then
+		local even=$(expr $tmp % 2)
+		if [ "$even" -eq 1 ]; then
+			invalid=1
+			echo "even=$even" >> $error_msg
+		fi
+	else
+		case ${lastchar} in
+			a|A|c|C|e|E)
+				# lowercase to uppercase
+				if [ ${tmp} -lt 102 -a ${tmp} -gt 96 ]; then
+					local uppercase=$(echo $lastchar | tr 'a-z' 'A-Z')
+					tmp=$(decimal $uppercase)
+				fi
+			;;
+			*)
+				invalid=1
+				echo "The last char is not A or C or E" >> $error_msg
+			;;
+		esac
+	fi
+
+#
+# If the last char is incorrec, do nothing.
+# WiFi driver will set default MAC
+#
+	if [ $invalid -ne 1 ]; then
+		tmp=$(expr $tmp + 1)
+		tmp=$(char $tmp)
+		local wifi1_mac="${front_mac}${tmp}"
+		echo "$lan_mac" >> $wifi0_mac_file
+		echo "$wifi1_mac" >> $wifi1_mac_file
+		sleep 1
+	fi
+}

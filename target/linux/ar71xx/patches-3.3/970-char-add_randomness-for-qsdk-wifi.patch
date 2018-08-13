@@ -1,0 +1,37 @@
+--- a/drivers/char/random.c	2014-09-12 21:37:44.102408599 +0800
++++ b/drivers/char/random.c	2014-09-12 20:54:10.886408487 +0800
+@@ -793,6 +793,24 @@
+ 	credit_entropy_bits(r, 1);
+ }
+ 
++void add_randomness(const char *buffer, int size, int nbits)
++{
++	preempt_disable();
++	/* if over the trickle threshold, use only 1 in 4096 samples */
++	if (input_pool.entropy_count > trickle_thresh &&
++	    (__get_cpu_var(trickle_count)++ & 0xfff))
++		goto out;
++
++	nbits = min_t(int, nbits, size * 8);
++
++	mix_pool_bytes(&input_pool, buffer, size, NULL);
++	credit_entropy_bits(&input_pool, nbits);
++
++out:
++	preempt_enable();
++}
++EXPORT_SYMBOL(add_randomness);
++
+ #ifdef CONFIG_BLOCK
+ void add_disk_randomness(struct gendisk *disk)
+ {
+--- a/include/linux/random.h	2014-09-12 21:38:23.478408601 +0800
++++ b/include/linux/random.h	2014-09-12 20:54:40.910408753 +0800
+@@ -76,6 +76,7 @@
+ extern void add_input_randomness(unsigned int type, unsigned int code,
+ 				 unsigned int value);
+ extern void add_interrupt_randomness(int irq, int irq_flags);
++extern void add_randomness(const char *buffer, int size, int nbits);
+ 
+ extern void random_input_words(__u32 *buf, size_t wordcount, int ent_count);
+ extern int random_input_wait(void);

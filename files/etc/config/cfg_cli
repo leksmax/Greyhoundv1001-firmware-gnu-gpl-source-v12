@@ -1,0 +1,2 @@
+config cli
+	option cli_enable '1'

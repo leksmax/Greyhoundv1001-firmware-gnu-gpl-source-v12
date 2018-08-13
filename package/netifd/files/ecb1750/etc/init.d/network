@@ -1,0 +1,334 @@
+#!/bin/sh /etc/rc.common
+. /etc/functions.sh
+
+START=20
+STOP=90
+
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+
+config_load wireless
+
+isolation_vlan_settings_no_repeat()
+{
+	local vlanEnable=$(uci get network.sys.WLANVLANEnable)
+	local MvlanID=$(uci get network.sys.ManagementVLANID)
+	local wifi0_configs=$(echo "`uci show wireless -X|grep ifname|head -n 26|cut -d "." -f 2`")
+	local wifi1_configs=$(echo "`uci show wireless -X|grep ifname|tail -n 26|cut -d "." -f 2`")
+	local wifi0_mode=$(uci get wireless.wifi0.opmode)
+	local wifi1_mode=$(uci get wireless.wifi1.opmode)
+
+	if [ $vlanEnable -eq 1 ]; then
+		uci set network.lan.ifname="eth0.${MvlanID}"
+		uci set network.99.ifname="eth0"
+	else
+		uci set network.lan.ifname="eth0"
+		uci set network.99.ifname="na"
+	fi
+
+	# 2.4G
+        for option in $wifi0_configs; do
+		config_get_bool disabled "$option" disabled 1
+		config_get_bool isolation "$option" isolation 0
+		config_get index "$option" index
+		config_get vlan_id "$option" vlan_id
+		config_get mode_display "$option" mode_display
+		config_get network "$option" network
+
+		[ "$network" == "guest" ] && continue
+		[ "$disabled" == 1 ] && continue
+		[ "$mode_display" != "$wifi0_mode" ] && continue
+
+		if [ "$vlanEnable" == 1 ]; then
+			if [ "$isolation" == 0 ]; then
+				uci set wireless.${option}.network="99"
+			else
+				if [ "$MvlanID" -eq "$vlan_id" ]; then
+					uci set network.${index}.ifname="na"
+					uci set wireless.${option}.network="lan"
+				else
+					uci set network.${index}.ifname="eth0.${vlan_id}"
+					uci set wireless.${option}.network="$index"
+				fi
+			fi
+		else
+			if [ "$isolation" == 0 ]; then
+				uci set network.${index}.ifname="na"
+				uci set wireless.${option}.network="lan"
+			else
+				uci set network.${index}.ifname="eth0.${vlan_id}"
+				uci set wireless.${option}.network="$index"
+			fi
+		fi
+	done
+
+        # 5G
+        for option in $wifi1_configs; do
+		config_get_bool disabled "$option" disabled 1
+		config_get_bool isolation "$option" isolation 0
+		config_get index "$option" index
+		config_get vlan_id "$option" vlan_id
+		config_get mode_display "$option" mode_display
+		config_get network "$option" network
+
+		[ "$network" == "guest" ] && continue
+		[ "$disabled" == 1 ] && continue
+		[ "$mode_display" != "$wifi1_mode" ] && continue
+
+		if [ "$vlanEnable" == 1 ]; then
+			if [ "$isolation" == 0 ]; then
+				uci set wireless.${option}.network="99"
+			else
+				if [ "$MvlanID" -eq "$vlan_id" ]; then
+					uci set network.${index}.ifname="na"
+					uci set wireless.${option}.network="lan"
+				fi
+			fi
+		else
+			if [ "$isolation" == 0 ]; then
+				uci set network.${index}.ifname="na"
+				uci set wireless.${option}.network="lan"
+			else
+				uci set network.${index}.ifname="eth0.${vlan_id}"
+				uci set wireless.${option}.network="$index"
+			fi
+		fi
+        done
+
+	uci commit
+}
+
+enables="/tmp/enables.txt"
+repeat="/tmp/vlan_repeat.txt"
+filter_vlanIDs="/tmp/filter_vlanIDs.txt"
+
+counting()
+{
+	# count 2.4G and 5G ap ssid numbers, it's 16
+	ap_ssid=$(uci show wireless |grep ].mode_display=ap|wc -l)
+	# find out 2.4G and 5G wds_ap ssid, it's 10
+	wdsap_ssid=$(uci show wireless |grep ].mode_display=wds_ap|wc -l)
+	# vlan id numbers, it's 24
+	vlan_id_num=$(uci show wireless |grep vlan_id|wc -l)
+}
+
+clear_network_configs()
+{
+	# clear all of network.ifname
+	local num=$(expr $(echo "`uci show network |tail -n 1|cut -d "." -f 2`") + 1)
+	local configs=$(echo "`uci show network|grep ifname|tail -n ${num}|cut -d "." -f 2`")
+
+	for option in $configs; do
+		uci set network.${option}.ifname="na"
+	done
+}
+
+isolation_network_options()
+{
+	local device="$1"
+	local wifi_mode=$(uci get wireless.${device}.opmode)
+	local vlan_jump
+	local ap_jump1
+	local ap_jump2
+	local wdsap_jump1
+	local wdsap_jump2
+	local jump1
+	local jump2
+
+	if [ "$device" == "wifi0" ]; then
+		ap_jump1=$(expr $ap_ssid / 2)
+		ap_jump2=$(expr $ap_ssid / 2)
+		wdsap_jump1=$(expr $vlan_id_num - 1)
+		wdsap_jump2=$(expr $(expr $vlan_id_num - $ap_ssid) / 2)
+	else
+		ap_jump1="$ap_ssid"
+		ap_jump2=$(expr $ap_ssid / 2)
+		wdsap_jump2=$(expr $(expr $vlan_id_num - $ap_ssid) / 2)
+		wdsap_jump1=$(expr $vlan_id_num + $wdsap_jump2)
+	fi
+
+	case $wifi_mode in
+		ap)
+			jump1="$ap_jump1"
+			jump2="$ap_jump2"
+		;;
+		wds_ap)
+			jump1="$wdsap_jump1"
+			jump2="$wdsap_jump2"
+		;;
+	esac
+
+	#
+	# === AP === 
+	#
+	# wifi0 = @wifi-iface[0] ~ @wifi-iface[7], $(echo "`uci show wireless |grep ifname|head -n 8|tail -n 8|cut -d "." -f 2`")
+	#
+	# wifi1 = @wifi-iface[8] ~ @wifi-iface[15], $(echo "`uci show wireless |grep ifname|head -n 16|tail -n 8|cut -d "." -f 2`")
+	#
+	# === WDS_AP ===
+	#
+	# wifi0 = @wifi-iface[19] ~ @wifi-iface[22], $(echo "`uci show wireless |grep ifname|head -n 23|tail -n 4|cut -d "." -f 2`")
+	#
+	# wifi1 = @wifi-iface[24] ~ @wifi-iface[27], $(echo "`uci show wireless |grep ifname|head -n 28|tail -n 4|cut -d "." -f 2`")
+	#
+	local wifi_configs=$(echo "`uci show wireless |grep ifname|head -n ${jump1}|tail -n ${jump2}|cut -d "." -f 2`")
+
+	# Gather the ssid which enable and isolate for further check
+	for option in $wifi_configs; do
+		local disabled=$(uci get wireless.${option}.disabled)
+		local vlanID=$(uci get wireless.${option}.vlan_id)
+		local isolation=$(uci get wireless.${option}.isolation)
+
+		[ "$disabled" == 1 ] && continue
+		[ "$isolation" == 0 ] && continue
+		echo "wireless.${option}.disabled=${disabled}" >> $enables
+		echo "wireless.${option}.vlan_id=${vlanID}" >> $enables
+	done
+
+	if [ -r $enables ]; then
+		cat ${enables}|grep vlan_id|cut -d "=" -f 2 > $filter_vlanIDs
+	fi
+
+	# look for repeat vlanID
+	if [ -r $filter_vlanIDs ]; then
+		sort $filter_vlanIDs | uniq -d > $repeat
+	fi
+
+	# It's necessary to scan all wifi configs for new settings.
+	for option in $wifi_configs; do
+		local index=$(uci get wireless.${option}.index)
+		local disabled=$(uci get wireless.${option}.disabled)
+		local isolation=$(uci get wireless.${option}.isolation)
+		local vlanID=$(uci get wireless.${option}.vlan_id)
+
+		[ "$disabled" == 1 ] && continue
+
+		if [ "$vlanEnable" == 1 ]; then
+			if [ "$isolation" == 0 ]; then
+				uci set wireless.${option}.network="99"
+			else
+				if [ "$MvlanID" -eq "$vlanID" ]; then
+					uci set network.${index}.ifname="na"
+					uci set wireless.${option}.network="lan"
+				else
+					uci set network.${index}.ifname="eth0.${vlanID}"
+					local final="$index"
+					if [ -r "$repeat" ]; then
+						local checkID=$(grep -w ${vlanID} ${repeat})
+						if [ -n "$checkID" ]; then
+							local new=$(cat ${enables}|grep -w vlan_id=${vlanID}|head -n 1|cut -d "." -f 2)
+							final=$(uci get wireless.${new}.index)
+							if [ $final -ne $index ]; then
+								uci set network.${index}.ifname="na"
+							fi
+						fi
+					fi
+					uci set wireless.${option}.network=${final}
+				fi
+			fi
+		else
+			if [ "$isolation" == 0 ]; then
+				uci set network.${index}.ifname="na"
+				uci set wireless.${option}.network="lan"
+			else
+				uci set network.${index}.ifname="eth0.${vlanID}"
+				local final="$index"
+				if [ -r "$repeat" ]; then
+					local checkID=$(grep -w ${vlanID} ${repeat})
+					if [ -n "$checkID" ]; then
+						local new=$(cat ${enables}|grep -w vlan_id=${vlanID}|head -n 1|cut -d "." -f 2)
+						final=$(uci get wireless.${new}.index)
+						if [ $final -ne $index ]; then
+							uci set network.${index}.ifname="na"
+						fi
+					fi
+				fi
+				uci set wireless.${option}.network=${final}
+			fi
+		fi
+	done
+
+	uci commit
+}
+
+isolation_vlan_settings()
+{
+	MvlanID=$(uci get network.sys.ManagementVLANID)
+	vlanEnable=$(uci get network.sys.WLANVLANEnable)
+
+	if [ $vlanEnable -eq 1 ]; then
+		uci set network.lan.ifname="eth0.${MvlanID}"
+		uci set network.99.ifname="eth0"
+	else
+		uci set network.lan.ifname="eth0"
+		uci set network.99.ifname="na"
+	fi
+
+	counting
+	clear_network_configs
+	isolation_network_options wifi0
+	sleep 1
+	isolation_network_options wifi1
+	sleep 1
+
+	[ -r $repeat ] && rm -rf $repeat
+	[ -r $enables ] && rm -rf $enables
+	[ -r $filter_vlanIDs ] && rm -rf $filter_vlanIDs
+}
+
+ipv6() {
+	local proto=$(uci get network.lan.proto)
+	local ip6LinkLocalEn=$(uci get network.lan.ip6LinkLocalEn)
+
+	if [ "$proto" == "static" ]; then
+		if [ "$ip6LinkLocalEn" -eq 1 ]; then
+			echo 2 > /proc/sys/net/ipv6/conf/br-lan/accept_ra
+		else
+			echo 1 > /proc/sys/net/ipv6/conf/br-lan/accept_ra
+		fi
+	else
+		echo 2 > /proc/sys/net/ipv6/conf/br-lan/accept_ra
+	fi
+}
+
+start() {
+	stop
+	[ -e /proc/sys/kernel/core_pattern ] && {
+		ulimit -c unlimited
+		echo '/tmp/%e.%p.%s.%t.core' > /proc/sys/kernel/core_pattern
+	}
+	isolation_vlan_settings
+	service_start /sbin/netifd
+	setup_switch() { return 0; }
+	include /lib/network
+	setup_switch
+	sleep 5
+	/sbin/wifi down
+	/sbin/wifi up
+	sleep 1
+	ipv6
+}
+
+restart() {
+	ifdown -a
+	sleep 1
+	start
+}
+
+shutdown() {
+	ifdown -a
+	stop
+}
+
+stop() {
+	service_stop /sbin/netifd
+}
+
+reload() {
+	isolation_vlan_settings
+	ubus call network reload
+	/sbin/wifi down
+	/sbin/wifi up
+	sleep 1
+	ipv6
+}

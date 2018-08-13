@@ -1,0 +1,12 @@
+config 'daylightsaving' 'daylightsaving'
+	option 'startWeek' '1'
+	option 'startDay' '0'
+	option 'startHour' '0'
+	option 'endWeek' '1'
+	option 'endDay' '1'
+	option 'endHour' '0'
+	option 'startMonth' '1'
+	option 'endMonth' '1'
+	option 'DayLightEnable' '0'
+
+

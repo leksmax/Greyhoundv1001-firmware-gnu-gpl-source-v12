@@ -1,0 +1,35 @@
+Source-Makefile: package/qca/devel/uboot-ipq806x/Makefile
+Package: uboot-ipq806x
+Version: 2012.07-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread @TARGET_ipq806x
+Menu-Depends: 
+Provides: 
+Build-Variant: ipq806x
+Section: boot
+Category: Boot Loaders
+Title: U-boot for IPQ806x based platforms
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: U-boot for IPQ806x based platforms
+http://www.denx.de/wiki/U-Boot
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+Package: uboot-ipq806x-fwupgrade-tools
+Version: 2012.07-1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread @TARGET_ipq806x
+Menu-Depends: 
+Provides: 
+Section: boot
+Category: Boot Loaders
+Title: U-boot images tools (dumpimage, mkimage)
+Maintainer: OpenWrt Developers Team <openwrt-devel@openwrt.org>
+Source: 
+Type: ipkg
+Description: U-boot images tools (dumpimage, mkimage)
+http://www.denx.de/wiki/U-Boot
+OpenWrt Developers Team <openwrt-devel@openwrt.org>
+@@
+
+

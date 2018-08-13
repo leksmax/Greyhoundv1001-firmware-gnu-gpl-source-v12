@@ -1,0 +1,176 @@
+<%local uci = luci.model.uci.cursor()%>
+<script type="text/javascript">
+$(function() 
+{
+	if("<%=self.network%>" == "wan")
+	{
+		if($('select[name$="cbid.network.wan.proto"]').val()=="dhcp" || $('select[name$="cbid.network.wan.proto"]').val()=="pptp"){
+			document.getElementById("cloneMac").style.display = '';
+			document.getElementById("mac").value="";
+		}
+		$('select[name$="cbid.network.wan.proto"]').change(function(){ 
+		   	this.form.submit();
+		});
+		$('input[name="cbi.apply"]').click(function()
+		{
+			return checkIPRange();
+		});
+		$('input[value="Save"]').click(function()
+		{
+			return checkIPRange();
+		});
+	}
+	else if("<%=self.network%>" == "lan")	// lan
+	{
+		document.getElementById("ipv6forLan").style.display = '';
+		document.getElementById("autoConfiguration").style.display = '';
+		document.getElementById("advertisementLifetime").style.display = '';
+		document.getElementById("dhcp6s_basic").checked = ("<%=uci:get('dhcp6s', 'basic', 'enabled')%>"=="1")?true:false;
+		if( "<%=uci:get_first('radvd', 'interface', 'AdvManagedFlag')%>"==0 && "<%=uci:get_first('radvd', 'interface', 'AdvOtherConfigFlag')%>" == 0 )
+		{
+			document.cbi.autoConfig.value = 0;
+		}
+		else if( "<%=uci:get_first('radvd', 'interface', 'AdvManagedFlag')%>"==0 && "<%=uci:get_first('radvd', 'interface', 'AdvOtherConfigFlag')%>" == 1 )
+		{
+			document.cbi.autoConfig.value = 1;
+		}
+		else
+		{
+			document.cbi.autoConfig.value = 2;
+		}
+		statefulIPrange(document.cbi.autoConfig.value);
+		document.cbi.lifetime.value = "<%=uci:get_first('radvd', 'prefix', 'AdvValidLifetime')%>";
+		document.cbi.IPstart.value = "<%=uci:get('dhcp6s', 'basic', 'IPstart')%>";
+		document.cbi.IPend.value = "<%=uci:get('dhcp6s', 'basic', 'IPend')%>";
+	}
+	else
+	{
+		$('select[name$="cbid.network.wan6.proto"]').change(function(){ 
+		   	this.form.submit();
+		});
+		if($('select[name$="cbid.network.wan6.proto"]').val()=="linklocal")
+		{
+			document.getElementById("brWan").style.display = '';
+			document.getElementById("brLan").style.display = '';
+		}
+	}
+
+});
+
+function cloneMac()
+{
+	document.getElementById("mac").value=cloneMacAddress;
+}
+
+function statefulIPrange(value)
+{
+	document.getElementById("addressStart").style.display= (value==2)?"":'none';
+	document.getElementById("addressEnd").style.display= (value==2)?"":'none';
+}
+function checkIPRange()
+{
+  	var IPstart = document.cbi.IPstart.value;
+  	var IPend = document.cbi.IPend.value;
+	var IPstartDec = parseInt(IPstart,16);
+	var IPendDec = parseInt(IPend,16);
+	var Reg = new RegExp("^[A-Fa-f0-9]{4}$");;	
+	if( IPstartDec < IPendDec)
+	{	if(document.cbi.IPstart.value != '0000' && document.cbi.IPstart.value != '0000' )
+		{
+  			if(!Reg.test(document.cbi.IPstart.value) || !Reg.test(document.cbi.IPend.value))
+  			{
+   				alert("Invalid number!!");
+    			return false;
+  			}
+  		}
+  		else
+  		{   
+  			alert("Invalid number!!");
+  			return false;
+  		}
+  	}
+  	else
+ 	{
+		alert("Invalid number!!");
+   		return false;		
+ 	}
+}
+</script>
+
+<div id="cloneMac" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		Mac Address
+	</label>
+	<div class="cbi-value-field">
+		<input type="button" name="macAddress" onclick="cloneMac()" value="Clone MAC Address">
+		<input type="text" name="mac" id="mac">
+	</div>
+</div>
+
+<div id="ipv6forLan" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		Enable automatic IPv6 address assignment
+	</label>
+	<div class="cbi-value-field">
+		<input type="checkbox" id="dhcp6s_basic" name="dhcp6s_basic" >
+	</div>
+</div>
+
+<div id="autoConfiguration" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		Autoconfiguration Type
+	</label>
+	<div class="cbi-value-field">
+		<select style="width:30%" name="autoConfig" id="autoConfig" onChange="statefulIPrange(this.value)">
+			<option value="0">SLAAC + RDNSS</option>
+			<option value="1">SLAAC + Stateless DHCPv6</option>
+			<option value="2">Stateful (DHCPv6)</option>
+		</select>
+	</div>
+</div>
+
+<div id="addressStart" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		IPv6 Address Range (Start)
+	</label>
+	<div class="cbi-value-field">
+		<input type="text" id="IPstart" name="IPstart">
+	</div>
+</div>
+
+<div id="addressEnd" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		IPv6 Address Range (End)
+	</label>
+	<div class="cbi-value-field">
+		<input type="text" id="IPend" name="IPend">
+	</div>
+</div>
+
+<div id="advertisementLifetime" style="display:none"  class="cbi-value cbi-value-last">
+	<label class="cbi-value-title">
+		Router Advertisement Lifetime
+	</label>
+	<div class="cbi-value-field">
+		<input type="text" id="lifetime" name="lifetime">
+		(minutes)
+	</div>
+</div>
+
+<div id="brLan" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		WAN IPv6 Link-Local Address
+	</label>
+	<div class="cbi-value-field">
+		<%=luci.util.exec("ifconfig br-wan | grep Scope | awk -F \" \" '{print $3}'")%>
+	</div>
+</div>
+
+<div id="brWan" style="display:none"  class="cbi-value cbi-value-last">
+	<label class="cbi-value-title">
+		LAN IPv6 Link-Local Address
+	</label>
+	<div class="cbi-value-field">
+		<%=luci.util.exec("ifconfig br-lan | grep Scope | awk -F \" \" '{print $3}'")%>
+	</div>
+</div>

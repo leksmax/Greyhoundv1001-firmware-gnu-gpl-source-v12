@@ -1,0 +1,321 @@
+<%+header%>
+<%
+	local uci = luci.model.uci.cursor()
+    local ntm = require "luci.model.network"
+    ntm.init(uci)	
+	local dmz_table = {}
+	uci:foreach("firewall","dmz",
+		function(s)
+			if s[".name"]~="dmz" then		
+				if s[".name"]:match("^dmz") then
+					dmz_table[s[".name"]] = s	
+				end
+			end		
+		end)	
+%>
+<script type="text/javascript">
+
+var dmz_table = (function(){
+	var lan_proto = "<%=uci:get('network', 'lan', 'proto')%>", 
+			lan_ip,
+			lan_mask,dmz_enable,
+  	init = function(){
+		$(':checkbox[name=\"dmz.enable\"]').each(function(){
+			 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+			 $(this).attr("checked",enable_status=='1'?true:false);
+			 $(this).click(function(){
+			 	var ev = $(this)[0].checked ?1:0;
+			 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+			 });
+		});
+
+		if(lan_proto == "dhcp")
+		{
+			lan_ip='<%=ntm.init():get_network("lan"):ipaddr()%>';
+			lan_mask = '<%=ntm.init():get_network("lan"):netmask()%>';
+			if(lan_ip=="" || lan_mask==""){
+				lan_ip='<%=uci:get("network", "lan", "ipaddr")%>';
+				lan_mask = '<%=uci:get("network", "lan", "netmask")%>';
+			}
+		}
+		else
+		{
+			lan_ip='<%=uci:get("network", "lan", "ipaddr")%>';
+			lan_mask = '<%=uci:get("network", "lan", "netmask")%>';
+		} 
+
+		$('#sta_btn').click(function(){
+			if(dmz_table.isFull()){
+			}else if(!dmz_table.lanCheck($("#sta_client").val(),$("#sta_public").val())){
+
+			}else{
+				dmz_table.add($("#sta_client").val(),$("#sta_public").val());
+			}
+		});
+
+		$('#dyn_btn').click(function(){
+			if(dmz_table.isFull()){
+			}else if(!dmz_table.lanCheck($("#dyn_client").val())){
+
+			}else{
+				dmz_table.add($("#dyn_client").val());
+			}
+		});		
+
+		$('#del_all_btn').click(function(){
+				dmz_table.del_all();
+		});
+
+		$('#del_btn').click(function(){
+				dmz_table.del();
+		});		
+		drawTable(); 		
+    },
+    isFull = function(){
+    	return $("#list_dmz_table").find('tr:hidden').length == 0;
+    },
+    lanCheck = function(c,p){
+    
+			if(!isIpaddr(c)){
+				alert(invalid("<%:Client PC ip address%>"));
+				return false;
+			}
+            if(isMulticast(c)){
+                alert("<%:Client PC ip address cannot be a multicast ip address.%>");
+                return false;
+            }
+            if(isLinklocal(c)){
+                alert("<%:Client PC ip address cannot be a linklocal ip address.%>");
+                return false;
+            }
+            if(isLoopback(c)){
+                alert("<%:Client PC ip address cannot be a loopback ip address.%>");
+                return false;
+            }
+			if(!isSameSubnet(lan_ip, lan_mask, c)){
+				alert(invalid("<%:It should be set within the current subnet. Now our LAN IP is %>"+lan_ip));
+				return false;
+			}            
+    	
+
+    	if(p){
+			if(!isIpaddr(p)){
+				alert(invalid("<%:Public PC ip address%>"));
+				return false;
+			}
+            if(isMulticast(p)){
+                alert("<%:Public PC ip address cannot be a multicast ip address.%>");
+                return false;
+            }
+            if(isLinklocal(p)){
+                alert("<%:Public PC ip address cannot be a linklocal ip address.%>");
+                return false;
+            }
+            if(isLoopback(p)){
+                alert("<%:Public PC ip address cannot be a loopback ip address.%>");
+                return false;
+            }
+    	}
+
+            if(duplicate_Check(c)){
+                alert("<%:Dublicate ip address in DMZ table.%>");
+                return false;
+            }
+
+    	return true;
+    },
+    duplicate_Check = function(c){
+    	var dup_flag = false;
+		$("#list_dmz_table").find('tr[id^="dmz"]:visible').each(function(i){
+			$(this).find(':hidden[name$=\".clientipaddr\"]').each(function(){
+				if($(this).val()==c){
+					dup_flag = true;
+					return ;
+				}
+			})		
+		})    	
+		return dup_flag;
+    },    
+    add = function(c,p){
+	 		var new_dmz_id =""
+			$("#list_dmz_table").find('tr:hidden').each(function(){
+				new_dmz_id = $(this).attr("id");
+				return;
+			})
+			$("#"+new_dmz_id).show();    
+			$(':hidden[name$=\"'+new_dmz_id+'.publicipaddr\"]').val(p);	
+			$(':hidden[name$=\"'+new_dmz_id+'.clientipaddr\"]').val(c);		
+  			drawTable();
+    },
+    del = function(){
+			$("#list_dmz_table").find('tr[id^="dmz"]:visible').each(function(i){
+
+				if($(this).find(':checkbox')[0].checked){
+					$(this).find(':hidden').each(function(){
+						$(this).val("");
+					})
+					$(this).find(':checkbox').each(function(){
+						$(this).attr('checked', false);
+					})				
+					$(this).hide();							
+				}
+				drawTable();
+			})   
+    },
+    del_all = function(){
+			$("#list_dmz_table").find('tr[id^="dmz"]:visible').each(function(i){
+				$(this).find(':hidden').each(function(){
+					$(this).val("");
+				})
+				$(this).find(':checkbox').each(function(){
+					$(this).attr('checked', false);
+				})				
+				$(this).hide();			
+			})    	
+    },    
+    drawTable = function(){
+ 			$("#list_dmz_table").find('tr[id^="dmz"]:visible').each(function(i){
+				$(this).find('td:first').text(i+1);
+				$(this).find('td:nth(1)').text($(this).find(':hidden[name$=\"publicipaddr\"]').val()||"----");	
+				$(this).find('td:nth(2)').text($(this).find(':hidden[name$=\"clientipaddr\"]').val());	
+			})
+    },
+    save = function(){
+    };
+
+    return {
+        init :init,
+        isFull:isFull,
+        lanCheck:lanCheck,
+        add: add,
+        del:del,
+        del_all:del_all,
+        drawTable : drawTable,
+        save : save
+    };
+
+}());
+
+$(function() {
+	$(':radio[name="ip_type"]').click(function(){
+		$("#dyn_select").attr("disabled",$(this).val()=="static");
+		$("#dyn_client").attr("disabled",$(this).val()=="static");
+		$("#dyn_btn").toggle($(this).val()=="dynamic");
+		$("#sta_public").attr("disabled",$(this).val()=="dynamic");
+		$("#sta_client").attr("disabled",$(this).val()=="dynamic");
+		$("#sta_btn").toggle($(this).val()=="static");
+	}).trigger("click");
+
+	dmz_table.init();
+
+  
+
+
+});
+
+
+
+</script>
+
+<form action="<%=REQUEST_URI%>" method="post">
+<input type="hidden" name="cbid.firewall.dmz.enable" value="<%=uci:get('firewall', 'dmz', 'enable')%>">
+
+<div class="cbi-map">	
+	<h2>
+		<a>DMZ</a>
+	</h2>
+	<fieldset class="cbi-section">
+		<!-- <legend><input type="checkbox"> Enable DMZ</legend> -->
+		<div class="cbi-section-node">
+			<div class="cbi-section-descr"><input type="checkbox" name="dmz.enable" > Enable DMZ</div>
+			<table id="add_dmz_table" class="cbi-section-table">
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell">Public IP Address</th>
+					<th class="cbi-section-table-cell">Client PC IP Address</th>
+					<th class="cbi-value-field"></th>
+				</tr>
+				<tr class="cbi-section-table-row">
+					<td class="cbi-value-field"><input name="ip_type" type="radio" value="dynamic">Dynamic IP</td>
+					<td class="cbi-value-field"><select id="dyn_select"><option>Session1</option></select></td>
+					<td class="cbi-value-field"><input type="text" id="dyn_client"></td>
+				<td class="cbi-value-field"> <div style="float:right;"><img id="dyn_btn" class="cbi-image-button" src="/luci-static/resources/cbi/btn-add.png"></div></td>
+				</tr>	
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field"><input name="ip_type" type="radio" value="static">Static IP</td>
+					<td class="cbi-value-field"><input type="text" id="sta_public"></td>
+					<td class="cbi-value-field"><input type="text" id="sta_client"></td>
+					<td class="cbi-value-field"><div style="float:right;"><img id="sta_btn" class="cbi-image-button" src="/luci-static/resources/cbi/btn-add.png"></div></td>
+				</tr>								
+			</table>
+		</div>
+	</fieldset>	
+<br>
+<hr width="100%" color="#000000">
+<br>		
+	<fieldset class="cbi-section">
+		<legend>DMZ table:</legend>
+		<div class="cbi-section-descr"></div>
+		<div class="cbi-section-node">
+			<table id="list_dmz_table" class="cbi-section-table" >
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell">NO.</th>
+					<th class="cbi-section-table-cell">Public PC IP Address</th>
+					<th class="cbi-section-table-cell">Client PC IP Address</th>
+					<th class="cbi-section-table-cell">Select</th>
+				</tr>	
+
+<%
+				for k, v in pairs(dmz_table) do
+					if v["clientipaddr"] ~= nil then
+
+%>
+
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" >
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox" name="111">
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.publicipaddr' value='<%=v["publicipaddr"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.clientipaddr' value='<%=v["clientipaddr"]%>'>						
+					</td>
+				</tr>	
+
+<%
+					else
+%>
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" style="display:none">
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox">
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.publicipaddr' value='<%=v["publicipaddr"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.clientipaddr' value='<%=v["clientipaddr"]%>'>						
+					</td>
+				</tr>					
+
+<%
+					end	
+				end
+%>
+
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field" colsapn="2"><div style="float:left;"><input class="cbi-button " type="button" value="Delete Selected" id="del_btn">		<input class="cbi-button " type="button" value="Delete All" id="del_all_btn" ></div></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+				</tr>	
+			</table>
+		</div>
+	</fieldset>
+<div class="cbi-page-actions">
+	<input class="cbi-button cbi-button-apply" type="submit" value="Save & Apply" name="cbi.apply">
+	<input class="cbi-button cbi-button-save" type="submit" value="Save">
+	<input class="cbi-button cbi-button-reset" type="reset" value="Reset">
+	<script type="text/javascript">cbi_d_update();</script>
+</div>	
+</div>
+</form>
+<%+footer%>

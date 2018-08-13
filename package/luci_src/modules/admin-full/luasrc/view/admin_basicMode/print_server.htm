@@ -1,0 +1,76 @@
+<%+header%>
+<%local uci = luci.model.uci.cursor()%>
+<script type="text/javascript">
+var GREY_SWITCH_OFF = 0;
+var GREY_SWITCH_ON = 1;
+
+function switchChange(value)
+{
+	switch(parseInt(value))
+	{		
+		case GREY_SWITCH_OFF:
+			document.getElementById("greybutton_off").style.display = '';
+			document.getElementById("greybutton_on").style.display = 'none';
+			break;
+		case GREY_SWITCH_ON:
+			document.getElementById("greybutton_off").style.display = 'none';
+			document.getElementById("greybutton_on").style.display = '';
+			break;
+	}
+}
+function copyto()
+{
+	document.getElementById("greybutton_off").style.display = '';
+}
+</script>
+<body onLoad="copyto();">
+<form action="<%=REQUEST_URI%>" method="post" >
+	<table width="100%" style="border-bottom:2px #000000 solid;border-collapse:collapse">
+	<tr class="SubpageHeading_3" style="background-color:#696969">
+	<td style="padding-left:30px;width:50%"><%:Print server%>
+	</td>
+	<td style="padding-left:30px;">
+		<img src="<%=media%>/icons/basic/form-switch-on-grey.png" id="greybutton_on" style="display:none" onclick="switchChange(GREY_SWITCH_OFF);" alt=""/>
+		<img src="<%=media%>/icons/basic/form-switch-off-grey.png" id="greybutton_off" style="display:none" onclick="switchChange(GREY_SWITCH_ON);" alt=""/>
+	</td>
+	<td style="text-align:right;padding-right:30px;">
+		<img src="<%=media%>/icons/basic/icon-info.png" alt=""/>
+	</td>
+	</tr>
+	<tr class="SubpageHeading_3" style="padding-right:30px;text-align:right;">
+	<td colspan="3" style="padding-right:30px;">
+	<input class="cbi-button cbi-button-save" type="submit" name="save" value="<%:Save%>">
+	</td>
+	</tr>
+	</table>
+
+	<table width="100%" style="border-collapse:collapse">
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Print Cue%></td>
+	</tr>
+	<tr class="SubpageHeading_3" >
+		<td class="td_basic_style"><%:Name%></td>
+		<td class="td_basic_style"><%:Status%></td>
+	</tr>
+	<script type="text/javascript">	whiteline2();</script>
+	<tr class="SubpageHeading_3" >
+		<td class="td_basic_style"><%:Example.doc%></td>
+		<td style="padding-left:30px;"><%:Printing%></td>
+		<td style="text-align:right;padding-right:30px;"><img src="<%=media%>/icons/basic/icon-delete.png" alt=""/></td>
+	</tr>
+	<script type="text/javascript">	whiteline2();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Example.ppt%></td>
+		<td class="td_basic_style"><%:Cued%></td>
+		<td style="text-align:right;padding-right:30px;"><img src="<%=media%>/icons/basic/icon-delete.png" alt=""/></td>
+	</tr>
+	<script type="text/javascript">	whiteline2();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Example.xlsx%></td>
+		<td class="td_basic_style"><%:Cued%></td>
+		<td style="text-align:right;padding-right:30px;"><img src="<%=media%>/icons/basic/icon-delete.png" alt=""/></td>
+	</tr>
+	</table>
+</form>
+</body>
+<%+footer%>

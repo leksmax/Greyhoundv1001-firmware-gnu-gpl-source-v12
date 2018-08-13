@@ -1,0 +1,360 @@
+<%+header%>
+<%
+	local uci = luci.model.uci.cursor()
+    local ntm = require "luci.model.network"
+    ntm.init(uci)	
+	local virtualsrv_table = {}
+	uci:foreach("firewall","virtualsrv",
+		function(s)
+			if s[".name"]~="virtualsrv" then		
+				if s[".name"]:match("^virtualsrv") then
+					virtualsrv_table[s[".name"]] = s	
+				end
+			end		
+		end)	
+%>
+<script type="text/javascript">
+
+var virtualsrv_table = (function(){
+	var lan_proto = "<%=uci:get('network', 'lan', 'proto')%>", 
+			lan_ip,
+			lan_mask,virtualsrv_enable,
+		protocolTable = [
+		"<%:TCP%>",
+		"<%:UDP%>",
+		"<%:BOTH%>"
+		],				
+  	init = function(){
+		$(':checkbox[name=\"virtualsrv.enable\"]').each(function(){
+			 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+			 $(this).attr("checked",enable_status=='1'?true:false);
+			 $(this).click(function(){
+			 	var ev = $(this)[0].checked ?1:0;
+			 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+			 });
+		});
+
+		if(lan_proto == "dhcp")
+		{
+			lan_ip='<%=ntm.init():get_network("lan"):ipaddr()%>';
+			lan_mask = '<%=ntm.init():get_network("lan"):netmask()%>';
+			if(lan_ip=="" || lan_mask==""){
+				lan_ip='<%=uci:get("network", "lan", "ipaddr")%>';
+				lan_mask = '<%=uci:get("network", "lan", "netmask")%>';
+			}
+		}
+		else
+		{
+			lan_ip='<%=uci:get("network", "lan", "ipaddr")%>';
+			lan_mask = '<%=uci:get("network", "lan", "netmask")%>';
+		} 
+
+
+		$('#add_virtualsrv_btn').click(function(){
+
+			if(isFull()){
+			}else if(!lanCheck($("#new_ipaddr").val())){
+
+			}else if(!portCheck($("#new_localport").val(),$("#new_publicport").val())){
+
+			}else{
+				add($("#new_ipaddr").val(),$("#new_localport").val(),$("#new_type").val(),$("#new_publicport").val(),$("#new_comment").val());
+			}
+
+		});		
+
+		$('#del_all_btn').click(function(){
+				del_all();
+		});
+
+		$('#del_btn').click(function(){
+				del();
+		});		
+		drawTable(); 		
+    },
+    isFull = function(){
+    	return $("#list_virtualsrv_table").find('tr:hidden').length == 0;
+    },
+    lanCheck = function(ipaddr){
+
+	   		if(!ipaddr){
+    			alert("<%:Local IP should not be empty.%>");
+    			return false
+    		}
+    
+			if(!isIpaddr(ipaddr)){
+				alert(invalid("<%:Local PC ip address%>"));
+				return false;
+			}
+            if(isMulticast(ipaddr)){
+                alert("<%:Local PC ip address cannot be a multicast ip address.%>");
+                return false;
+            }
+            if(isLinklocal(ipaddr)){
+                alert("<%:Local PC ip address cannot be a linklocal ip address.%>");
+                return false;
+            }
+            if(isLoopback(ipaddr)){
+                alert("<%:Local PC ip address cannot be a loopback ip address.%>");
+                return false;
+            }
+
+			if(!isSameSubnet(lan_ip, lan_mask, ipaddr)){
+				alert(invalid("<%:It should be set within the current subnet. Now our LAN IP is %>"+lan_ip));
+				return false;
+			}            
+
+    	return true;
+    },
+    portCheck = function(localport,publicport){
+
+    	if(!localport||!publicport){
+    		alert("<%:Port should not be empty.%>");
+    		return false
+    	}    	
+
+    	if(localport){
+	    	if(!isBetween(localport,0,65535)){
+	    		alert(invalid("Local Port number")+"<%:You should set a value between 1-65535.%>");
+	    		return false;
+	    	}   		
+    	}
+
+    	if(publicport){
+	    	if(!isBetween(publicport,0,65535)){
+	    		alert(invalid("Public Port number")+"<%:You should set a value between 1-65535.%>");
+	    		return false;
+	    	}  
+
+	    	if(duplicate_Check(publicport)){
+    		 	alert("<%:Dublicate Public Port  in Virtual Server Table.%>");
+	    		return false;
+	    	}   	    	  		
+    	}
+
+
+    	return true;    	
+    },
+    duplicate_Check = function(c){
+    	var dup_flag = false;
+		$("#list_virtualsrv_table").find('tr[id^="virtualsrv"]:visible').each(function(i){
+			$(this).find(':hidden[name$=\".publicport\"]').each(function(){
+				if($(this).val()==c){
+					dup_flag = true;
+					return ;
+				}
+			})		
+		})    	
+		return dup_flag;
+    },    
+    add = function(ipaddr,localport,type,publicport,comment){
+	 		var new_virtualsrv_id =""
+			$("#list_virtualsrv_table").find('tr:hidden').each(function(){
+				new_virtualsrv_id = $(this).attr("id");
+				return;
+			})
+			$("#"+new_virtualsrv_id).show();    
+			$(':hidden[name$=\"'+new_virtualsrv_id+'.ipaddr\"]').val(ipaddr);	
+			$(':hidden[name$=\"'+new_virtualsrv_id+'.localport\"]').val(localport);
+			$(':hidden[name$=\"'+new_virtualsrv_id+'.type\"]').val(type);	
+			$(':hidden[name$=\"'+new_virtualsrv_id+'.publicport\"]').val(publicport);	
+			$(':hidden[name$=\"'+new_virtualsrv_id+'.comment\"]').val(comment);			
+  			drawTable();
+    },
+    del = function(){
+			$("#list_virtualsrv_table").find('tr[id^="virtualsrv"]:visible').each(function(i){
+
+				if($(this).find(':checkbox')[0].checked){
+					$(this).find(':hidden').each(function(){
+						$(this).val("");
+					})
+					$(this).find(':checkbox').each(function(){
+						$(this).attr('checked', false);
+					})				
+					$(this).hide();							
+				}
+				drawTable();
+			})   
+    },
+    del_all = function(){
+			$("#list_virtualsrv_table").find('tr[id^="virtualsrv"]:visible').each(function(i){
+				$(this).find(':hidden').each(function(){
+					$(this).val("");
+				})
+				$(this).find(':checkbox').each(function(){
+					$(this).attr('checked', false);
+				})				
+				$(this).hide();			
+			})    	
+    },
+    drawProtocol = function(protocol){
+    	return protocolTable[protocol];
+    },        
+    drawTable = function(){
+ 			$("#list_virtualsrv_table").find('tr[id^="virtualsrv"]:visible').each(function(i){
+				$(this).find('td:first').text(i+1);
+				$(this).find('td:nth(1)').text($(this).find(':hidden[name$=\"ipaddr\"]').val());	
+				$(this).find('td:nth(2)').text($(this).find(':hidden[name$=\"localport\"]').val());
+				$(this).find('td:nth(3)').text(drawProtocol($(this).find(':hidden[name$=\"type\"]').val()));
+				$(this).find('td:nth(4)').text($(this).find(':hidden[name$=\"publicport\"]').val());
+				$(this).find('td:nth(5)').text($(this).find(':hidden[name$=\"comment\"]').val());	
+			})
+    },
+    save = function(){
+    };
+
+    return {
+        init :init,
+        isFull:isFull,
+        lanCheck:lanCheck,
+        add: add,
+        del:del,
+        del_all:del_all,
+        drawTable : drawTable,
+        save : save
+    };
+
+}());
+
+$(function() {
+	// $(':radio[name="ip_type"]').click(function(){
+	// 	$("#dyn_select").attr("disabled",$(this).val()=="static");
+	// 	$("#dyn_client").attr("disabled",$(this).val()=="static");
+	// 	$("#dyn_btn").toggle($(this).val()=="dynamic");
+	// 	$("#sta_public").attr("disabled",$(this).val()=="dynamic");
+	// 	$("#sta_client").attr("disabled",$(this).val()=="dynamic");
+	// 	$("#sta_btn").toggle($(this).val()=="static");
+	// }).trigger("click");
+
+	virtualsrv_table.init();
+
+  
+
+
+});
+
+
+
+</script>
+
+<form action="<%=REQUEST_URI%>" method="post">
+<input type="hidden" name="cbid.firewall.virtualsrv.enable" value="<%=uci:get('firewall', 'virtualsrv', 'enable')%>">
+
+<div class="cbi-map">	
+	<h2>
+		<a>Virtual Server</a>
+	</h2>
+	<fieldset class="cbi-section">
+		<!-- <legend><input type="checkbox"> Enable DMZ</legend> -->
+		<div class="cbi-section-node">
+			<div class="cbi-section-descr"><input type="checkbox" name="virtualsrv.enable" > <%:Enable Virtual Server%></div>
+			<table id="add_virtualsrv_table" class="cbi-section-table">
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:Local IP%></th>
+					<th class="cbi-section-table-cell"><%:Local Port%></th>
+					<th class="cbi-section-table-cell"><%:Type%></th>
+					<th class="cbi-section-table-cell"><%:Public Port%></th>
+					<th class="cbi-section-table-cell"><%:Comment%></th>
+					<th class="cbi-section-table-cell"></th>
+				</tr>
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field"><input type="text" id="new_ipaddr" ></td>
+					<td class="cbi-value-field"><input type="text" id="new_localport" ></td>
+					<td class="cbi-value-field">
+						<select id="new_type">
+							<option value="2">Both</option>
+							<option value="0">TCP</option>
+							<option value="1">UDP</option>
+						</select>
+					</td>
+					<td class="cbi-value-field"><input type="text"  id="new_publicport"></td>
+					<td class="cbi-value-field"><input type="text" id="new_comment"></td>
+				<td class="cbi-value-field"> <div style="float:right;"><img id="add_virtualsrv_btn" class="cbi-image-button" src="/luci-static/resources/cbi/btn-add.png"></div></td>
+				</tr>								
+			</table>
+		</div>
+	</fieldset>	
+<br>
+<hr width="100%" color="#000000">
+<br>		
+	<fieldset class="cbi-section">
+		<legend><%:Current Virtual Server Table%></legend>
+		<div class="cbi-section-descr"></div>
+		<div class="cbi-section-node">
+			<table id="list_virtualsrv_table" class="cbi-section-table" >
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell"><%:NO.%></th>
+					<th class="cbi-section-table-cell"><%:Local IP%></th>
+					<th class="cbi-section-table-cell"><%:Local Port%></th>
+					<th class="cbi-section-table-cell"><%:Type%></th>
+					<th class="cbi-section-table-cell"><%:Public Port%></th>
+					<th class="cbi-section-table-cell"><%:Comment%></th>
+					<th class="cbi-section-table-cell"><%:Select%></th>
+				</tr>	
+
+<%
+				for k, v in pairs(virtualsrv_table) do
+					if v["ipaddr"] ~= nil then
+
+%>
+
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" >
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox" >
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.ipaddr' value='<%=v["ipaddr"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.localport' value='<%=v["localport"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.type' value='<%=v["type"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.publicport' value='<%=v["publicport"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.comment' value='<%=v["comment"]%>'>
+					</td>
+				</tr>	
+
+<%
+					else
+%>
+				<tr id='<%=v[".name"]%>'  class="cbi-section-table-row" style="display:none">
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field">
+						<input type="checkbox">
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.ipaddr' value='<%=v["ipaddr"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.localport' value='<%=v["localport"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.type' value='<%=v["type"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.publicport' value='<%=v["publicport"]%>'>
+						<input type="hidden" name='cbid.firewall.<%=v[".name"]%>.comment' value='<%=v["comment"]%>'>						
+					</td>
+				</tr>					
+
+<%
+					end	
+				end
+%>
+
+				<tr class="cbi-section-table-row-last">
+					<td class="cbi-value-field" colspan="2"><div style="float:left;"><input class="cbi-button " type="button" value="Delete Selected" id="del_btn">		<input class="cbi-button " type="button" value="Delete All" id="del_all_btn" ></div></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+					<td class="cbi-value-field"></td>
+				</tr>	
+			</table>
+		</div>
+	</fieldset>
+<div class="cbi-page-actions">
+	<input class="cbi-button cbi-button-apply" type="submit" value="Save & Apply" name="cbi.apply">
+	<input class="cbi-button cbi-button-save" type="submit" value="Save">
+	<input class="cbi-button cbi-button-reset" type="reset" value="Reset">
+	<script type="text/javascript">cbi_d_update();</script>
+</div>	
+</div>
+</form>
+<%+footer%>

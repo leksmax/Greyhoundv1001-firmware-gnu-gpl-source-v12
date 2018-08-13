@@ -1,0 +1,169 @@
+<%+header%>
+<%
+	local uci = require "luci.model.uci".cursor()
+	local ntm = require "luci.model.network"
+    ntm.init(uci)
+    arg = {"wifi0.network1","wifi0.network2","wifi1.network1","wifi1.network2"}
+	local wnet1 = ntm:get_wifinet(arg[1])
+	local wnet2 = ntm:get_wifinet(arg[2])
+	local wnet3 = ntm:get_wifinet(arg[3])
+	local wnet4 = ntm:get_wifinet(arg[4])
+%>
+
+
+	<style>
+		table tr{
+			height:45px;
+		}
+	</style>
+	<script type="text/javascript" src="<%=resource%>/jquery-1.11.1.js"></script>
+	<script type="text/javascript">
+
+	$(function() 
+	{
+
+		//  ---------------showTooltip------------------
+			var showTooltip = function(event) {
+			  $('div.tooltip').css('display','none');
+			  changeTooltipPosition(event);			  
+			};
+
+			var changeTooltipPosition = function(event) {
+			  var tooltipX = event.pageX - 280;
+			  var tooltipY = event.pageY - 40;			  
+			  $('div.tooltip').css({top: tooltipY, left: tooltipX});
+			  $('div.tooltip').css('display','block');
+			  
+			};
+		 
+			var hideTooltip = function() {
+			   $('div.tooltip').css('display','none');
+			};
+		 
+			$(".info").bind({
+			   mousemove : changeTooltipPosition,
+			   mouseenter : showTooltip,
+			   mouseleave: hideTooltip
+			});
+
+		// ----------------switch picture----------------
+		// $("img[name=signal2_4G]").click(function(){ 
+		// 	showStream(index);
+		// })
+
+		$("img[name=signal2_4G]").bind({
+    		'click': function(){
+        		$('img[name=signal2_4G]').toggle();
+    		}
+		});
+
+		$("img[name=seur2_4G]").bind({
+    		'click': function(){
+        		$('img[name=seur2_4G]').toggle();
+    		}
+		});
+		
+		$("img[name=signal5G]").bind({
+    		'click': function(){
+        		$('img[name=signal5G]').toggle();
+    		}
+		});
+
+		$("img[name=seur5G]").bind({
+    		'click': function(){
+        		$('img[name=seur5G]').toggle();
+    		}
+		});
+		
+	});
+
+	</script>
+
+	<body>
+	<form width="100%" id="wps2_4G" method="post"  action='<%=luci.dispatcher.build_url("admin/network/wps")%>'>
+		<table width="94%" style=" color:white;border-collapse: collapse;margin-left:3%">
+			<tr>
+				<td colspan="4">2.4GHz Wi-fi Settings(your current connection) </td>
+			</tr>
+			<tr class="wifi_tr">
+				<td width="55%">Wi-Fi <%:Signal%></td>
+				<td width="40%">
+						<img name="signal2_4G" src="<%=media%>/icons/basic/form-switch-off-grey.png">
+						<img name="signal2_4G" style="display:none" src="<%=media%>/icons/basic/form-switch-on-grey.png" >
+				</td>
+				<td width="5%"><img class="info" src="<%=media%>/icons/basic/icon-info.png" ></img></td>
+			</tr>
+			<tr class="wifi_tr">
+				<td>Wi-Fi <%:Name%></td>
+				<td><%=uci:get('wireless',wnet1.sid,'ssid')%></td>
+				<td><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+			</tr>
+			<tr class="wifi_tr">
+				<td>Wi-Fi <%:Security%></td>
+				<td>
+					<img name="seur2_4G" src="<%=media%>/icons/basic/form-switch-off-grey.png" >
+					<img name="seur2_4G" style="display:none" src="<%=media%>/icons/basic/form-switch-on-grey.png" >
+				</td>
+				<td><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+			</tr>
+			<tr>
+				<td>Wi-Fi <%:Password%></td>
+				<td><%=uci:get('wireless',wnet1.sid,'key')%></td>
+				<td><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+			</tr>
+			<tr >
+				<td colspan="4" align="right">
+					<input type="button" class="cbi-button" style="width:80px" value="Edit" /> 
+				</td>
+			</tr>	
+		</table>
+		
+	</form>
+	
+	<HR color="#000000" width="100%">
+	<form>
+		<table width="94%" style=" color:white;border-collapse: collapse;margin-left:3%">
+			<tr>
+				<td colspan="4">5GHz Wi-fi Settings(your current connection) </td>
+			</tr>
+			<tr class="wifi_tr">
+				<td width="55%">Wi-Fi <%:Signal%></td>
+				<td width="40%">
+					<img name="signal5G" src="<%=media%>/icons/basic/form-switch-on.png" >
+					<img name="signal5G" style="display:none" src="<%=media%>/icons/basic/form-switch-off.png" >
+				</td>
+				<td width="5%"><img class="info" src="<%=media%>/icons/basic/icon-info.png" ></img></td>
+			</tr>	
+			<tr class="wifi_tr">
+				<td>Wi-Fi <%:Name%></td>
+				<td><%=uci:get('wireless',wnet3.sid,'ssid')%></td>
+				<td><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+			</tr>
+			<tr class="wifi_tr">
+				<td>Wi-Fi <%:Security%></td>
+				<td>
+					<img name="seur5G" src="<%=media%>/icons/basic/form-switch-on.png" >
+					<img name="seur5G" style="display:none" src="<%=media%>/icons/basic/form-switch-off.png" >
+				</td>
+				<td><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+			</tr>
+			<tr>
+				<td>Wi-Fi <%:Password%></td>
+				<td><%=uci:get('wireless',wnet3.sid,'key')%></td>
+				<td><img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+			</tr>
+			<tr >
+				<td colspan="4" align="right">
+					<input type="button" class="cbi-button" style="width:80px" value="Edit" /> 
+				</td>
+			</tr>		
+		</table>
+		
+		<div class="tooltip" style="color:#31414e;background-color:#ECE9E9;border-radius:5px;display:none">Wi-Fi Signal
+			<hr noshade color="black" >
+			<div style="color:black;"> Lorem ipsum dolor sit amet,<br>consectetur ...
+			</div>
+		</div>
+	</form>	
+	</body>		
+<%+footer%>  	

@@ -1,0 +1,87 @@
+Index: linux-3.3.8/drivers/net/phy/ar8216.c
+===================================================================
+--- linux-3.3.8.orig/drivers/net/phy/ar8216.c
++++ linux-3.3.8/drivers/net/phy/ar8216.c
+@@ -52,6 +52,7 @@ enum {
+ 	AR8XXX_VER_AR8236 = 0x03,
+ 	AR8XXX_VER_AR8316 = 0x10,
+ 	AR8XXX_VER_AR8327 = 0x12,
++	AR8XXX_VER_AR8337 = 0x13,
+ };
+ 
+ struct ar8xxx_mib_desc {
+@@ -229,6 +230,12 @@ static inline bool chip_is_ar8327(struct
+ 	return priv->chip_ver == AR8XXX_VER_AR8327;
+ }
+ 
++static inline bool chip_is_ar8337(struct ar8216_priv *priv)
++{
++	return priv->chip_ver == AR8XXX_VER_AR8337;
++}
++
++
+ static inline void
+ split_addr(u32 regaddr, u16 *r1, u16 *r2, u16 *page)
+ {
+@@ -368,7 +375,7 @@ ar8216_mib_op(struct ar8216_priv *priv, 
+ 
+ 	lockdep_assert_held(&priv->mib_lock);
+ 
+-	if (chip_is_ar8327(priv))
++	if (chip_is_ar8327(priv) || chip_is_ar8337(priv))
+ 		mib_func = AR8327_REG_MIB_FUNC;
+ 	else
+ 		mib_func = AR8216_REG_MIB_FUNC;
+@@ -412,7 +419,7 @@ ar8216_mib_fetch_port_stat(struct ar8216
+ 
+ 	lockdep_assert_held(&priv->mib_lock);
+ 
+-	if (chip_is_ar8327(priv))
++	if (chip_is_ar8327(priv) || chip_is_ar8337(priv))
+ 		base = AR8327_REG_PORT_STATS_BASE(port);
+ 	else if (chip_is_ar8236(priv) ||
+ 		 chip_is_ar8316(priv))
+@@ -1004,6 +1011,8 @@ ar8327_hw_init(struct ar8216_priv *priv)
+ 		return -EINVAL;
+ 
+ 	t = ar8327_get_pad_cfg(pdata->pad0_cfg);
++	if (chip_is_ar8337(priv)) 
++		t |= AR8337_PAD_MAC06_EXCHANGE_EN;
+ 	priv->write(priv, AR8327_REG_PAD0_MODE, t);
+ 	t = ar8327_get_pad_cfg(pdata->pad5_cfg);
+ 	priv->write(priv, AR8327_REG_PAD5_MODE, t);
+@@ -1678,6 +1687,10 @@ ar8216_id_chip(struct ar8216_priv *priv)
+ 		priv->mii_lo_first = true;
+ 		priv->chip = &ar8327_chip;
+ 		break;
++	case AR8XXX_VER_AR8337:
++		priv->mii_lo_first = true;
++		priv->chip = &ar8327_chip;
++		break;
+ 	default:
+ 		printk(KERN_DEBUG
+ 			"ar8216: Unknown Atheros device [ver=%d, rev=%d, phy_id=%04x%04x]\n",
+@@ -1849,6 +1862,10 @@ ar8216_config_init(struct phy_device *pd
+ 		swdev->name = "Atheros AR8327";
+ 		swdev->vlans = AR8X16_MAX_VLANS;
+ 		swdev->ports = AR8327_NUM_PORTS;
++	} else if (chip_is_ar8337(priv)) {
++		swdev->name = "Atheros AR8337";
++		swdev->vlans = AR8X16_MAX_VLANS;
++		swdev->ports = AR8327_NUM_PORTS;
+ 	} else {
+ 		swdev->name = "Atheros AR8216";
+ 		swdev->vlans = AR8216_NUM_VLANS;
+Index: linux-3.3.8/drivers/net/phy/ar8216.h
+===================================================================
+--- linux-3.3.8.orig/drivers/net/phy/ar8216.h
++++ linux-3.3.8/drivers/net/phy/ar8216.h
+@@ -289,6 +289,8 @@
+ #define   AR8327_PAD_RGMII_TXCLK_DELAY_EN	BIT(25)
+ #define   AR8327_PAD_RGMII_EN			BIT(26)
+ 
++#define   AR8337_PAD_MAC06_EXCHANGE_EN		BIT(31)
++
+ #define AR8327_REG_POWER_ON_STRIP		0x010
+ #define   AR8327_POWER_ON_STRIP_POWER_ON_SEL	BIT(31)
+ #define   AR8327_POWER_ON_STRIP_LED_OPEN_EN	BIT(24)

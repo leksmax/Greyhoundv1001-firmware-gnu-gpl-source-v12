@@ -1,0 +1,159 @@
+<%+header%>
+<%
+	local uci = luci.model.uci.cursor()
+    local ntm = require "luci.model.network"
+    ntm.init(uci)	
+%>
+<script type="text/javascript">
+var checkRule= (function(){
+    var checkResult = true,
+    statrtCheck = function(){
+		if(burst_check()){
+			$('form').submit();
+		}
+		return false;
+    },
+    burst_check = function(){
+    	var flag = true;
+    	
+    	$(':text[name^=\"cbid.firewall.\"]').each(function(){
+    		if(!isNumber($(this).val())){
+    			flag = false;
+    			$(this).focus();
+    			alert(invalid("<%:It should be a decimal number:0-9%>"));
+    			return;
+    		}
+    	});
+    	return flag;
+    }
+    return{
+        check : statrtCheck
+    };
+
+}());
+
+$(function() {
+	$(':checkbox[name^=\"dos\"]').each(function(){
+		 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+		 $(this).attr("checked",enable_status=='1'?true:false);
+		 $(this).click(function(){
+		 	var ev = $(this)[0].checked ?1:0;
+		 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+		 });
+	});
+
+  	$(':checkbox[name$=\"pingofdeath\"]').click(function(){
+  		var is_checked = $(this)[0].checked ;
+  		$('#ping_tr div').children().each(function(){
+			$(this).attr("disabled",!is_checked);		  			
+  		});
+  	}).triggerHandler("click");
+
+  	$(':checkbox[name$=\"syncflood\"]').click(function(){
+  		var is_checked = $(this)[0].checked ;
+  		$('#syn_tr div').children().each(function(){
+			$(this).attr("disabled",!is_checked);		  			
+  		});
+  	}).triggerHandler("click");
+
+  	$(':checkbox[name$=\"portscan\"]').click(function(){
+  		var is_checked = $(this)[0].checked ;
+  		$('#port_tr div').children().each(function(){
+			$(this).attr("disabled",!is_checked);		  			
+  		});
+  	}).triggerHandler("click");
+
+});
+
+
+
+</script>
+
+<form action="<%=REQUEST_URI%>" method="post">
+	<input type="hidden" name="cbid.firewall.dos.pingofdeath" value="<%=uci:get('firewall', 'dos', 'pingofdeath')%>">
+	<input type="hidden" name="cbid.firewall.dos.pingonwan" value="<%=uci:get('firewall', 'dos', 'pingonwan')%>">
+	<input type="hidden" name="cbid.firewall.dos.portscan" value="<%=uci:get('firewall', 'dos', 'portscan')%>">
+	<input type="hidden" name="cbid.firewall.dos.portnmap" value="<%=uci:get('firewall', 'dos', 'portnmap')%>">
+	<input type="hidden" name="cbid.firewall.dos.portxmas" value="<%=uci:get('firewall', 'dos', 'portxmas')%>">
+	<input type="hidden" name="cbid.firewall.dos.portanotherxmas" value="<%=uci:get('firewall', 'dos', 'portanotherxmas')%>">
+	<input type="hidden" name="cbid.firewall.dos.portnull" value="<%=uci:get('firewall', 'dos', 'portnull')%>">
+	<input type="hidden" name="cbid.firewall.dos.portsynrst" value="<%=uci:get('firewall', 'dos', 'portsynrst')%>">
+	<input type="hidden" name="cbid.firewall.dos.portsynfin" value="<%=uci:get('firewall', 'dos', 'portsynfin')%>">
+	<input type="hidden" name="cbid.firewall.dos.portsyn" value="<%=uci:get('firewall', 'dos', 'portsyn')%>">
+	<input type="hidden" name="cbid.firewall.dos.syncflood" value="<%=uci:get('firewall', 'dos', 'syncflood')%>">
+
+<div class="cbi-map">	
+	<h2>
+		<a>Dos</a>
+	</h2>
+	<fieldset class="cbi-section">
+		<div class="cbi-section-node">
+			<div class="cbi-section-descr"><%:The firewall can block common hacker attacks, including Dos, Discard Ping from WAN and Port Scan.%></div>
+			<br><br>
+			<table id="dos_table" class="cbi-section-table">
+				<tr class="cbi-section-table-titles">
+					<th class="cbi-section-table-cell">Denial of Service feature</th>
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell"></th>
+					<th class="cbi-section-table-cell"></th>
+				</tr>
+				<tr id="ping_tr" class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Ping of Death%></td>
+					<td class="cbi-value-field"><input type="checkbox" name="dos.pingofdeath"></td>
+					<td class="cbi-value-field">
+						<div style="float:left;">
+							<input type="text" name="cbid.firewall.dos.pingpacket"  value="<%=uci:get('firewall', 'dos', 'pingpacket')%>"> <%:Packet(s)%>	 
+						<!-- 	<%:per%><select name="burst_select">
+										<option><%:second%></option>
+										<option><%:minute%></option>
+										<option><%:hour%></option>
+									</select>	 -->
+							<%:burst%> <input type="text" name="cbid.firewall.dos.pingburst" value="<%=uci:get('firewall', 'dos', 'pingburst')%>">			
+						</div>
+					</td>
+				</tr>	
+				<tr class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Discard Ping on WAN%></td>
+					<td class="cbi-value-field"><input type="checkbox" name="dos.pingonwan"></td>
+					<td class="cbi-value-field"></td>
+				</tr>
+				<tr id="port_tr" class="cbi-section-table-row">
+					<td class="cbi-value-field"><%:Port scan%></td>
+					<td class="cbi-value-field"><input type="checkbox" name="dos.portscan"></td>
+					<td class="cbi-value-field">
+							<div><input type="checkbox" name="dos.portnmap"><%: NMAP FIN / URG / PSH%></div>
+							<div><input type="checkbox" name="dos.portxmas"><%: Xmas tree%></div>
+							<div><input type="checkbox" name="dos.portanotherxmas"><%: Another Xmas tree%></div>
+							<div><input type="checkbox" name="dos.portnull"><%: Null scan%></div>
+							<div><input type="checkbox" name="dos.portsynrst"><%: SYN / RST%></div>
+							<div><input type="checkbox" name="dos.portsynfin"><%: SYN / FIN%></div>
+							<div><input type="checkbox" name="dos.portsyn"><%: SYN / (only unreachable port)%></div>
+					</td>
+				</tr>
+				<tr id="syn_tr" class="cbi-section-table-row-last">
+					<td class="cbi-value-field"><%:Sync Flood%></td>
+					<td class="cbi-value-field"><input type="checkbox" name="dos.syncflood"></td>
+					<td class="cbi-value-field">
+						<div style="float:left;">
+							<input type="text" name="cbid.firewall.dos.syncfloodpacket" value="<%=uci:get('firewall', 'dos', 'syncfloodpacket')%>"> <%:Packet(s)%>	 
+				<!-- 			<%:per%><select>
+										<option><%:second%></option>
+										<option><%:minute%></option>
+										<option><%:hour%></option>
+									</select> -->	
+							<%:burst%> <input type="text" name="cbid.firewall.dos.syncfloodburst" value="<%=uci:get('firewall', 'dos', 'syncfloodburst')%>">
+						</div>
+					</td>
+				</tr>																		
+			</table>
+		</div>
+	</fieldset>		
+<div class="cbi-page-actions">
+	<input class="cbi-button cbi-button-apply" type="button" onclick='checkRule.check()' value="Save & Apply" name="cbi.apply">
+	<input class="cbi-button cbi-button-save" type="button" onclick='checkRule.check()' value="Save">
+	<input class="cbi-button cbi-button-reset" type="reset" value="Reset">
+	<script type="text/javascript">cbi_d_update();</script>
+</div>	
+</div>
+</form>
+<%+footer%>

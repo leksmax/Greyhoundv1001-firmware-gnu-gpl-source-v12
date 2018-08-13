@@ -1,0 +1,8 @@
+config utm 'utm'
+	option sc_utm_en '1'
+	option sc_utm_ver ''
+	option sc_utm_keyFea ''
+	option sc_utm_sec_key ''
+	option sc_utm_Fea ''
+	option sc_utm_act ''
+	option sc_utm_keyExp ''

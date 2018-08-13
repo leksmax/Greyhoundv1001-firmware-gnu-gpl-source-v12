@@ -1,0 +1,8 @@
+config wifi2G wifi0
+	option enable 0
+	option adv_search 0
+
+config wifi5G wifi1
+	option enable 0
+	option adv_search 0
+

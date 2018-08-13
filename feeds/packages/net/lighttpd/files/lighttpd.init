@@ -1,0 +1,28 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+SERVICE_USE_PID=1
+
+START=50
+
+start() {
+	if [ "`uci get lighttpd.@https[0].forward`" = "1" ]; then
+		sed -i 's/^.*"mod_redirect"/	"mod_redirect"/g' /etc/lighttpd/lighttpd.conf
+	else
+		sed -i 's/^.*"mod_redirect"/#	"mod_redirect"/g' /etc/lighttpd/lighttpd.conf
+	fi
+
+	if [ "`uci get lighttpd.@https[0].enable`" = "1" ]; then
+		sed -i 's/^.*ssl/	ssl/g' /etc/lighttpd/lighttpd.conf
+	else
+		sed -i 's/^.*ssl/#	ssl/g' /etc/lighttpd/lighttpd.conf
+	fi
+
+	mkdir -m 0755 -p /var/log/lighttpd
+	service_start /usr/sbin/lighttpd -f /etc/lighttpd/lighttpd.conf
+}
+
+stop() {
+	service_stop /usr/sbin/lighttpd
+}
+

@@ -1,0 +1,60 @@
+<style>
+	h2{
+		padding-left: 20px;
+	}
+	.cbi-page-actions{
+		float:right;
+		margin-bottom: 20px;
+		margin-right: 20px;
+	}
+	div div:last-of-type{
+		border-bottom: none;
+	}
+
+</style>
+
+<script>
+	$(function(){
+		$('select[name$="wifi0.hwmode"]').change(function(){
+			if ($('select[name$="wifi0.hwmode"]').val() == "11n")
+			{
+				$('option[id$="cfg043579-cipher-tkip"],option[id$="cfg043579-cipher-tkip+ccmp"]').hide();
+				$('option[id$="wifi0_guest-cipher-tkip"],option[id$="wifi0_guest-cipher-tkip+ccmp"]').hide();
+				$('option[id$="cfg043579-cipher-ccmp"]').prop('selected','selected');
+				$('option[id$="wifi0_guest-cipher-ccmp"]').prop('selected','selected');
+			}
+			else{
+				$('option[id$="cfg043579-cipher-tkip"],option[id$="cfg043579-cipher-tkip+ccmp"]').show();
+				$('option[id$="wifi0_guest-cipher-tkip"],option[id$="wifi0_guest-cipher-tkip+ccmp"]').show();
+			}
+		});
+
+		$('select[name$="wifi1.hwmode"]').change(function(){
+			if ($('select[name$="wifi1.hwmode"]').val() == "11n")
+			{
+				$('option[id$="cfg063579-cipher-tkip"],option[id$="cfg063579-cipher-tkip+ccmp"]').hide();
+				$('option[id$="wifi1_guest-cipher-tkip"],option[id$="wifi1_guest-cipher-tkip+ccmp"]').hide();
+				$('option[id$="cfg063579-cipher-ccmp"]').prop('selected','selected');
+				$('option[id$="wifi1_guest-cipher-ccmp"]').prop('selected','selected');
+			}
+			else{
+				$('option[id$="cfg063579-cipher-tkip"],option[id$="cfg063579-cipher-tkip+ccmp"]').show();
+				$('option[id$="wifi1_guest-cipher-tkip"],option[id$="wifi1_guest-cipher-tkip+ccmp"]').show();
+			}
+		})
+
+
+
+		
+		if ($('select[name$="wifi0.hwmode"]').val() == "11n")
+		{
+			$('select[name$="wifi0.hwmode"]').triggerHandler("change");
+		}
+
+		if ($('select[name$="wifi1.hwmode"]').val() == "11n")
+		{
+			$('select[name$="wifi1.hwmode"]').triggerHandler("change");
+		}
+
+	});
+</script>

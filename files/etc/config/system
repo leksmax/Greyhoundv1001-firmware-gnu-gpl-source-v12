@@ -1,0 +1,21 @@
+config system
+	option hostname	WLR9100
+	option timezone	'UTC0'
+	option SystemName WLR9100
+	option LogLevel '9'
+	option syslog_enable '1'
+	option remotelog_enable '0'
+	option zonename 'Gambia, Liberia, Morocco'
+	option zonenumber '20'
+
+config timeserver ntp
+	list server	pool.ntp.org
+	option enable_server 1
+
+config led1
+
+config led2
+
+config led3
+
+config led4

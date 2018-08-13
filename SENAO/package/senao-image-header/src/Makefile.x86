@@ -1,0 +1,15 @@
+INCLUDES = -I./h
+
+OBJS = md5sys.o header.o
+
+all: clean header_x86
+
+header_x86: $(OBJS)
+	cc $(INCLUDES) -o $@ $? $(LIBS)
+
+%.o: %.c
+	echo 'CC $@'
+	cc $(INCLUDES) -c -o $@ $< 
+
+clean:
+	rm -rf *.o header_x86

@@ -1,0 +1,235 @@
+<%+header%>
+<%
+	local uci = luci.model.uci.cursor()
+    local ntm = require "luci.model.network"
+    ntm.init(uci)	
+%>
+<script type="text/javascript">
+// var checkRule= (function(){
+//     var checkResult = true,
+//     statrtCheck = function(){
+// 		if(burst_check()){
+// 			$('form').submit();
+// 		}
+// 		return false;
+//     },
+//     burst_check = function(){
+//     	var flag = true;
+    	
+//     	$(':text[name^=\"cbid.firewall.\"]').each(function(){
+//     		if(!isNumber($(this).val())){
+//     			flag = false;
+//     			$(this).focus();
+//     			alert(invalid("<%:It should be a decimal number:0-9%>"));
+//     			return;
+//     		}
+//     	});
+//     	return flag;
+//     }
+//     return{
+//         check : statrtCheck
+//     };
+
+// }());
+
+$(function() {
+	$('.off').each(function(){
+		$(this).click(function(){
+			$(this).next('.on').show();
+			$(this).hide();
+		})
+	});
+	$('.on').each(function(){
+		$(this).click(function(){
+			$(this).prev('.off').show();
+			$(this).hide();
+		})
+	});	
+$('#usb1_status').html(progressbar(
+			10 + " <%:kB%>",
+			100 + " <%:kB%>"
+		));
+$('#usb2_status').html(progressbar(
+			60 + " <%:kB%>",
+			100 + " <%:kB%>"
+		));
+$('#sd_status').html(progressbar(
+			50 + " <%:kB%>",
+			100 + " <%:kB%>"
+		));
+// 	$(':checkbox[name^=\"dos\"]').each(function(){
+// 		 var enable_status = $(':hidden[name$=\"'+$(this).attr("name")+'\"]').val();
+// 		 $(this).attr("checked",enable_status=='1'?true:false);
+// 		 $(this).click(function(){
+// 		 	var ev = $(this)[0].checked ?1:0;
+// 		 	$(':hidden[name$=\"'+$(this).attr("name")+'\"]').val(ev);
+// 		 });
+// 	});
+
+//   	$(':checkbox[name$=\"pingofdeath\"]').click(function(){
+//   		var is_checked = $(this)[0].checked ;
+//   		$('#ping_tr div').children().each(function(){
+// 			$(this).attr("disabled",!is_checked);		  			
+//   		});
+//   	}).triggerHandler("click");
+
+//   	$(':checkbox[name$=\"syncflood\"]').click(function(){
+//   		var is_checked = $(this)[0].checked ;
+//   		$('#syn_tr div').children().each(function(){
+// 			$(this).attr("disabled",!is_checked);		  			
+//   		});
+//   	}).triggerHandler("click");
+
+//   	$(':checkbox[name$=\"portscan\"]').click(function(){
+//   		var is_checked = $(this)[0].checked ;
+//   		$('#port_tr div').children().each(function(){
+// 			$(this).attr("disabled",!is_checked);		  			
+//   		});
+//   	}).triggerHandler("click");
+
+});
+
+
+
+</script>
+<form action="<%=REQUEST_URI%>" method="post">
+<div class="cbi-map">	
+<!-- 	<h2>
+		<a>Storage Settings</a>
+	</h2> -->
+	<fieldset class="cbi-section">
+		<div class="cbi-section-node">
+			<div class="cbi-section-descr">Storage Settings</div>
+			<table id="storage_table"  class="cbi-section-table" width="100%" >
+				<tr  class="cbi-section-table-row">
+					<td class="cbi-value-field" ></td>
+					<td class="cbi-value-field">Sharing	<img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+					<td class="cbi-value-field">DLNA	<img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+					<td class="cbi-value-field">iTunes	<img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+					<td class="cbi-value-field">FTP	<img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+					<td class="cbi-value-field">Airprint	<img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+					<td class="cbi-value-field">Time-machine	<img class="info" src="<%=media%>/icons/basic/icon-info.png"></img></td>
+				</tr>				
+				<tr  class="cbi-section-table-row">
+					<td class="cbi-value-field">USB1</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>																							
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>													
+				</tr>
+				<tr  class="cbi-section-table-row">
+					<td class="cbi-value-field">USB2</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>																							
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>																			
+				</tr>				
+				<tr  class="cbi-section-table-row">
+					<td class="cbi-value-field">SD-Card</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>																							
+					</td>
+					<td class="cbi-value-field">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>
+					</td>
+					<td class="cbi-value-field-last">
+					<img class="off" src="<%=media%>/icons/basic/checkbox.png" >
+					<img class="on" style="display:none" src="<%=media%>/icons/basic/checkbox-checked.png" >
+					</td>																			
+				</tr>																										
+			</table>
+		</div>
+	<div class="cbi-page-actions" >
+		<input class="cbi-button cbi-button-save" type="button"  value="Save">		
+		<script type="text/javascript">cbi_d_update();</script>
+	</div>			
+	</fieldset>
+	<div class="cbi-section-node" style="padding:10px;">	
+	<div class="cbi-section-descr">Storage Available</div>
+		<table class="cbi-section-table" width="100%" >
+			<tr class="cbi-section-table-row">
+				<td class="cbi-value-field">USB1</td>
+				<td class="cbi-value-field"></td>
+				<td class="cbi-value-field">500 mb used</td>
+				<td class="cbi-value-field" id="usb1_status"></td>
+				<td class="cbi-value-field"></td>
+			</tr>
+			<tr class="cbi-section-table-row">
+				<td class="cbi-value-field">USB2</td>
+				<td class="cbi-value-field"></td>
+				<td class="cbi-value-field">500 mb used</td>
+				<td class="cbi-value-field" id="usb2_status"></td>
+				<td class="cbi-value-field"></td>
+			</tr>	
+			<tr class="cbi-section-table-row-last">
+				<td class="cbi-value-field">SD-Card</td>
+				<td class="cbi-value-field"></td>
+				<td class="cbi-value-field">500 mb used</td>
+				<td class="cbi-value-field" id="sd_status"></td>
+				<td class="cbi-value-field"></td>
+			</tr>	
+		</table>
+	</div>	
+</div>
+</form>
+<%+footer%>

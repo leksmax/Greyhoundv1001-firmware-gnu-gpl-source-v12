@@ -1,0 +1,42 @@
+Source-Makefile: package/qca/utils/qcmbr-10.4/Makefile
+Package: qcmbr-10.4
+Version: 1
+Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +libpthread +librt
+Menu-Depends: 
+Provides: 
+Section: QCA
+Category: QCA Proprietary software
+Title: qcmbr-10.4 - QCA ART Driver & tools
+Maintainer: Qualcomm Atheros
+Source: qcmbr-.tar.gz
+Type: ipkg
+Description:   ART package support for 10.4
+http://www.qca.qualcomm.com
+Qualcomm Atheros
+@@
+Config:
+	menu "custom source directory"
+		depends on PACKAGE_qcmbr-10.4
+	config qcmbr-10.4_USE_CUSTOM_SOURCE_DIR
+		depends on PACKAGE_qcmbr-10.4
+		bool "Use custom source directory"
+		default n
+	config qcmbr-10.4_CUSTOM_SOURCE_DIR
+		depends on qcmbr-10.4_USE_CUSTOM_SOURCE_DIR
+		string "Custom source directory"
+		default ""
+	endmenu
+	menu "overwrite package version"
+		depends on PACKAGE_qcmbr-10.4
+	config qcmbr-10.4_USE_CUSTOM_VERSION
+		depends on PACKAGE_qcmbr-10.4
+		bool "Use custom package version"
+		default n
+	config qcmbr-10.4_CUSTOM_VERSION
+		depends on qcmbr-10.4_USE_CUSTOM_VERSION
+		string " version as string (default version: )"
+		default ""
+	endmenu
+@@
+
+

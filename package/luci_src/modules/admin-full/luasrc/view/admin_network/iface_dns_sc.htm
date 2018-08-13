@@ -1,0 +1,300 @@
+<%local uci = luci.model.uci.cursor()%>
+<script type="text/javascript">
+$(function() 
+{
+	if("<%=self.network%>" == "wan")
+	{
+		if($('select[name$="cbid.network.wan.proto"]').val()=="static")
+		{	
+			dnsSetting();
+			document.getElementById("ipv4_dns1").style.display = '';
+			document.getElementById("ipv4_dns2").style.display = '';
+		}
+	}
+	else if("<%=self.network%>" == "lan")	// lan
+	{	
+		dnsSetting();
+		document.getElementById("ipv4_dns1").style.display = '';
+		document.getElementById("ipv4_dns2").style.display = '';
+	}
+	else
+	{
+		if($('select[name$="cbid.network.wan6.proto"]').val()=="static")
+		{	
+			dnsSetting();
+			document.getElementById("ipv6_dns1").style.display = '';
+			document.getElementById("ipv6_dns2").style.display = '';
+		}
+	}
+	$('input[name="cbi.apply"]').click(function()
+	{
+		return saveChanges();
+	});
+	$('input[value="Save"]').click(function()
+	{
+		return saveChanges();
+	});
+});
+
+	var IPv6_VALID_IP = 99;
+	var IPv6_INVALID_IP = 0;
+	var IPv6_ZERO_IP = 1;
+	var IPv6_1st_IP_ERROR = 2;
+	var IPv6_8th_IP_ERROR = 9;
+	var IPv6_MULTICAST_IP_ERROR = 19;
+	var IPV6_STR_ZERO_SYMBOL = 0;
+	var IPV6_STR_ONE_SYMBOL = 1;
+	var IPV6_STR_MORETHANTWO_SYMBOL = 2;
+	var IPV6_ADDR_NOTALLOWZERO = 0;
+	var IPV6_REGX = new RegExp("^((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(\\.(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}))|:)))(%.+)?$");
+	var IPV6_LOCAL_REGX = new RegExp("^([0]{1,4}::){1}[0-9A-Fa-f]{1,4}$");
+
+function saveChanges()
+{
+	if(getByName('ipv4dns1').value != "" && getByName('ipv4dns1').value != "0.0.0.0")
+	{
+		if(!isIpaddr(getByName('ipv4dns1').value))
+		{
+			alert(invalid("<%:Primary DNS%>"));
+			setfocus(getByName('ipv4dns1'));
+			return false;
+		}
+		if(isMulticast(getByName('ipv4dns1').value))
+		{
+			alert("<%:The primary DNS cannot be a multicast ip address.%>");
+			setfocus(getByName('ipv4dns1'));
+			return false;
+		}
+		if(isLinklocal(getByName('ipv4dns1').value))
+		{
+			alert("<%:The primary DNS cannot be a linklocal ip address.%>");
+			setfocus(getByName('ipv4dns1'));
+			return false;
+		}
+		if(isLoopback(getByName('ipv4dns1').value))
+		{
+			alert("<%:The primary DNS cannot be a loopback ip address.%>");
+			setfocus(getByName('ipv4dns1'));
+			return false;
+		}
+	}
+	if(getByName('ipv4dns2').value != "" && getByName('ipv4dns2').value != "0.0.0.0")
+	{
+		if(!isIpaddr(getByName('ipv4dns2').value))
+		{
+			alert(invalid("<%:Secondary DNS%>"));
+			setfocus(getByName('ipv4dns2'));
+			return false;
+		}
+		if(isMulticast(getByName('ipv4dns2').value))
+		{
+			alert("<%:The secondary DNS cannot be a multicast ip address.%>");
+			setfocus(getByName('ipv4dns2'));
+			return false;
+		}
+		if(isLinklocal(getByName('ipv4dns2').value))
+		{
+			alert("<%:The secondary DNS cannot be a linklocal ip address.%>");
+			setfocus(getByName('ipv4dns2'));
+			return false;
+		}
+		if(isLoopback(getByName('ipv4dns2').value))
+		{
+			alert("<%:The secondary DNS cannot be a loopback ip address.%>");
+			setfocus(getByName('ipv4dns2'));
+			return false;
+		}
+	}
+	if("<%=self.network%>" == "wan6")
+	{
+		if((getByName('ipv6dns1').value != "") || (getByName('ipv6dns2').value != ""))
+		{
+	 		if((getByName('ipv6dns1').value == "") && (getByName('ipv6dns2').value != ""))
+			{
+				getByName('ipv6dns1').value = getByName('ipv6dns2').value;
+				getByName('ipv6dns2').value = "";
+			}	
+			if(checkIpAddrV6(getByName('ipv6dns1')) != IPv6_VALID_IP)
+			{
+				alert("<%:The primary DNS is an invalid address.%>");
+				setfocus(getByName('ipv6dns1'));
+				return false;
+			}
+			if(getByName('ipv6dns2').value != "")
+			{
+				if(checkIpAddrV6(getByName('ipv6dns2')) != IPv6_VALID_IP)
+				{
+					alert("<%:The secondary DNS is an invalid address.%>");
+					setfocus(getByName('ipv6dns2'));
+					return false;
+				}
+			}
+		}
+	}
+}
+
+function dnsSetting()
+{
+	var lan_dns="", t_dns,ipv4_dns1="",ipv4_dns2="", ipv6_dns1="", ipv6_dns2="";
+	lan_dns = "<%=uci:get('network', 'lan', 'dns')%>"
+	if(lan_dns.length)
+	{
+		t_dns = lan_dns.split(" ");
+		ipv4_dns1 = t_dns[0] || "";
+		ipv4_dns2 = t_dns[1] || "";
+		ipv6_dns1 = t_dns[2] || "";
+		ipv6_dns2 = t_dns[3] || "";
+	}
+	document.cbi.ipv4dns1.value = ipv4_dns1;
+	document.cbi.ipv4dns2.value = ipv4_dns2;
+	document.cbi.ipv6dns1.value = ipv6_dns1;
+	document.cbi.ipv6dns2.value = ipv6_dns2;
+}
+
+function check_char_hex(charstr)
+{
+	charstr = charstr.toUpperCase();
+	if(!(charstr >= 'A' && charstr <= 'F') && !(charstr >= '0' && charstr <= '9'))
+	{
+		return false;
+	}
+	return true;
+}
+function check_ipv6_symbol_num(str)
+{
+	if(str.indexOf("::") == -1)
+		return IPV6_STR_ZERO_SYMBOL;
+	if(str.indexOf("::") == str.lastIndexOf("::"))
+		return IPV6_STR_ONE_SYMBOL;
+	if(str.indexOf("::") != str.lastIndexOf("::"))
+		return IPV6_STR_MORETHANTWO_SYMBOL;
+}
+function reserveIpa6Adar(addr, prefix)
+{
+	var str = addr.toLowerCase() + "/" + prefix,
+			ary = ["2001:2::/48", "2001::/32", "2002::/16", "2001:db8::/32", "2001:10::/28", "2001::/28", "3ffe::/16"];
+	return ($.inArray(str, ary) != -1);
+}
+function checkIpAddrV6(obj)
+{
+	var ipv6array;
+	var zero_count;
+	var ipv6temp;
+	var block_count;
+	var sum;
+	
+	if(!/[23]/.test(obj.value[0]) || reserveIpa6Adar(obj.value, "<%=uci:get('network', 'wan6', 'ip6prefix')%>") || check_ipv6_symbol_num(obj.value) == IPV6_STR_MORETHANTWO_SYMBOL)
+	{
+		return IPv6_INVALID_IP;
+	}
+	else if(check_ipv6_symbol_num(obj.value) == IPV6_STR_ZERO_SYMBOL)
+	{
+		ipv6array = obj.value.split(":");
+		sum = 0;
+		if(ipv6array.length == 8)
+		{
+			for(var i = 0; i < ipv6array.length; i++)
+			{
+				if(ipv6array[i].length > 4)
+					return IPv6_INVALID_IP;
+				for(var j = 0; j < ipv6array[i].length; j++)
+				{
+					if(!check_char_hex(ipv6array[i].charAt(j)))
+					{
+						return IPv6_1st_IP_ERROR + i;
+					}
+					sum += parseInt(ipv6array[i].charAt(j), 16);
+				}
+			}
+			if(sum == 0)
+			{
+				return IPv6_ZERO_IP;
+			}
+		}
+		else
+		{
+			return IPv6_INVALID_IP;
+		}
+	}
+	else if(check_ipv6_symbol_num(obj.value) == IPV6_STR_ONE_SYMBOL)
+	{
+		ipv6array = obj.value.split("::");
+		block_count = 0;
+		sum = 0;
+		if(ipv6array.length == 2)
+		{
+			for(var m = 0; m <= 1; m++)
+			{
+				ipv6temp = ipv6array[m].split(":");
+				for(var n = 0; n < ipv6temp.length; n++)
+				{
+					if(ipv6temp[n].length > 4)
+						return IPv6_INVALID_IP;
+					for(var p = 0; p < ipv6temp[n].length; p++)
+					{
+						if(!check_char_hex(ipv6temp[n].charAt(p)))
+						{
+							return IPv6_1st_IP_ERROR + block_count;
+						}
+						sum += parseInt(ipv6temp[n].charAt(p), 16);
+					}
+					block_count++;
+				}
+			}
+			if(sum == 0)
+			{
+				return IPv6_ZERO_IP;
+			}
+		}
+		else
+		{
+			return IPv6_INVALID_IP;
+		}
+	}
+	if(obj.value.charAt(0) == 'f' || obj.value.charAt(0) == 'F')
+	{
+		if(obj.value.charAt(1) == 'f' || obj.value.charAt(1) == 'F')
+		{
+			return IPv6_MULTICAST_IP_ERROR;
+		}
+	}
+	return IPv6_VALID_IP;
+}
+
+</script>
+
+<div id="ipv4_dns1" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		Primary DNS
+	</label>
+	<div class="cbi-value-field">
+		<input type="text" name="ipv4dns1" id="ipv4dns1">
+	</div>
+</div>
+
+<div id="ipv4_dns2" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		Secondary DNS
+	</label>
+	<div class="cbi-value-field">
+		<input type="text" name="ipv4dns2" id="ipv4dns2">
+	</div>
+</div>
+
+<div id="ipv6_dns1" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		Primary DNS
+	</label>
+	<div class="cbi-value-field">
+		<input type="text" name="ipv6dns1" id="ipv6dns1">
+	</div>
+</div>
+
+<div id="ipv6_dns2" style="display:none"  class="cbi-value">
+	<label class="cbi-value-title">
+		Secondary DNS
+	</label>
+	<div class="cbi-value-field">
+		<input type="text" name="ipv6dns2" id="ipv6dns2">
+	</div>
+</div>

@@ -1,0 +1,4 @@
+config 'model' 'model'
+	option 'modelName' 'WLR1750'
+	option 'description' 'Wi-Fi Router X8 AC1750'
+	option 'venderName' 'Sitecom'

@@ -1,0 +1,37 @@
+<%+header%>
+<%local uci = luci.model.uci.cursor()%>
+<script type="text/javascript">
+
+function copyto()
+{
+	;
+}
+</script>
+<body onLoad="copyto();">
+<form action="<%=REQUEST_URI%>" method="post" >	
+	<table width="100%" style="border-collapse:collapse">
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:Firmware Settings%></td>
+	</tr>
+	<tr class="SubpageHeading_3" >
+		<td class="td_basic_style"><%:Current Firmware version%></td>
+		<td class="td_basic_style"><%:v1-0002%></td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3" >
+		<td class="td_basic_style"><%:Available Firmware version%></td>
+		<td style="padding-left:30px;"><%:v1-0003%></td>
+	</tr>
+	<script type="text/javascript">	whiteline();</script>
+	<tr class="SubpageHeading_3">
+		<td class="td_basic_style"><%:View Changelog%></td>
+	</tr>
+	<tr class="SubpageHeading_3" style="padding-right:30px;text-align:right;">
+		<td colspan="3" style="padding-right:30px;">
+			<input class="cbi-button cbi-button-save" type="submit" name="save" value="<%:Update Firmware%>">
+		</td>
+	</tr>
+	</table>
+</form>
+</body>
+<%+footer%>

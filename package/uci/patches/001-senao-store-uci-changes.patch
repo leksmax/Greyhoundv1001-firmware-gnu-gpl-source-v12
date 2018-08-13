@@ -1,0 +1,12 @@
+Index: uci-2013-06-11.1/libuci.c
+===================================================================
+--- uci-2013-06-11.1.orig/libuci.c
++++ uci-2013-06-11.1/libuci.c
+@@ -202,6 +202,7 @@ int uci_commit(struct uci_context *ctx, 
+ 	p = *package;
+ 	UCI_ASSERT(ctx, p != NULL);
+ 	UCI_ASSERT(ctx, p->backend && p->backend->commit);
++	system("uci changes >>/tmp/config.changes");
+ 	p->backend->commit(ctx, package, overwrite);
+ 	return 0;
+ }

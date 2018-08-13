@@ -1,0 +1,153 @@
+
+<%
+	local uci = require "luci.model.uci".cursor()
+	local ntm = require "luci.model.network"
+%>
+<script type="text/javascript">
+
+
+	// $(function() 
+	// {
+	// 	var currnet_htmode = "<%=uci:get('wireless','wifi1','htmode')%>" ;
+	// 	var country = "<%=uci:get('wireless','wifi1','country')%>";
+	// 	// ------------ HT Mode
+	// 	$('select[id$="wifi1.htmode"]').change(function(){
+	// 		currnet_htmode = $(this).val();
+	// 		getchannel(currnet_htmode,country);
+	// 	}); 
+ //   		//-------------country change channel ---------------------
+	// 	$('select[name$="wifi1.country"]').change(function(){ 
+	// 		country = $(this).val();
+	// 		getchannel(currnet_htmode,$(this).val());
+	// 	});
+
+	// 	function getchannel(currnet_htmode,country){
+	// 		var url , container ,data;			
+	// 		var countryCode = country;
+	// 		console.log(currnet_htmode);
+	// 		console.log(country);
+	//    		url = '<%=luci.dispatcher.build_url("admin/wifi/ajax_getChannelList")%>';
+	//      	data = {countryCode:countryCode};
+
+	//      	switch(currnet_htmode){
+ //            case "HT40" : 
+ //                        htmode_flag = "v40";
+ //                        htmode_name = "40 MHz";
+ //                        break;
+ //            case "HT80" :
+ //                        htmode_flag = "v80";
+ //                        htmode_name = "80 MHz";
+ //                        break;
+ //            default :
+ //                        htmode_flag = "v20";
+ //                        break;                                        
+ //       		}
+
+	//     $.ajax({
+	// 		async: false,
+	//         type : "GET",
+	//         url:url,
+	//         data:data,
+	//         dataType:"json",
+	//         error:function(){	           
+	//         },
+	//         success:function(result){
+	//         	var channel_now = jQuery.parseJSON(result); 
+	//             for (var key in channel_now) { 
+	//                 var obj = channel_now[key];
+	//                 var ch_select = (key=="ChInfo2G"? $('select[id$="wifi0.channel"]'):$('select[id$="wifi1.channel"]'));                
+	//                 ch_select.find('span').each(function(){$(this).remove();});
+	//                 ch_select.find('option').each(function(){
+	//                     if($(this).attr("value") != "auto" || $(this).attr("value") != ""){
+	//                     	$(this).remove();
+	//                     }
+	//                 });
+	    
+	//                 ch_select.append('<option value="auto">auto</option>');
+	//                 for (var prop in obj) {
+	//                   if(obj.hasOwnProperty(prop)){
+	//                   	if (htmode_flag == "v20"){
+	//                   		ch_select.append($("<option></option>").attr("value", obj[prop]["Value"]).text(obj[prop]["Channel"]));    	
+	//                   	}	
+	//                   	else {
+	//                   		if (obj[prop][""+htmode_flag+""] == "1") {
+	                  			
+	//                   			ch_select.append($("<option></option>").attr("value", obj[prop]["Value"]).text(obj[prop]["Channel"]));
+	//                   		}	                  		
+	//                   	} 	                           	
+	//                   }
+	//                 }
+	//                 ch_select.append('<option value="">-- custom --</option>');
+	//                 if (key=="ChInfo5G")
+	//                 {                	
+	//              		if (ch_select.children("option").length <= 2){
+	//              			alert("This country 5G "+htmode_name+" not support, switch to 20 MHz");
+	//             			$('select[name$="wifi1.htmode"]').val("HT20");
+	//             			$('select[name$="wifi1.htmode"]').triggerHandler("change");
+	//              		}
+	             		
+	//                 }
+	                
+	//                 // if (i==0) {
+	//                 // 	alert("This country 5G 80MHz not support,switch to 20MHz");
+	//                 // 	$('select[name$="wifi1.htmode"]').val("HT20").selected = true;
+	//                 // 	htValue="HT20";
+	//                 // 	ch_select.find('span').each(function(){$(this).remove();});
+	//                 // 	ch_select.find('option').each(function(){
+	//                 // 		$(this).remove();
+	//                 // 	});
+	//                 // 	ch_select.append('<option value="auto">auto</option>');
+	//                 // 	for (var prop in obj) {
+	//                 // 		if(obj.hasOwnProperty(prop)){
+	//                 // 			ch_select.append($("<option></option>").attr("value", obj[prop]["Value"]).text(obj[prop]["Channel"]));
+	//                 // 		}
+	//                 // 	}
+	//                 // }	              
+	//             }
+
+	//         	}
+	//     	});
+	// 	}
+
+	// });
+
+    // -------------show country list--------------------
+	function showCountryList()
+	{
+	    var s = "", v, k;
+	    console.log('<%=luci.http.write_json(ntm:get_countrylist())%>');
+	    var j = $.parseJSON('<%=luci.http.write_json(ntm:get_countrylist())%>');
+	    var country_list = [];
+	    var name_value = {};
+	    for (var i in j){
+	        country_list.push(j[i]);
+	        name_value[j[i]] = i;
+	    }        
+	    country_list.sort();
+
+	    s += '<select size="1" name="cbid.wireless.wifi1.country" id="cbid.wireless.wifi1.country" class="cbi-input-select">';
+	    if('00' == "<%=uci:get('wireless', 'wifi1', 'country')%>"){
+	        s += '<option value="00"><%:Please select the country%></option>';
+	    }
+	    for(k in country_list)
+	    {
+	        country_name = country_list[k];
+	        s += '<option id="cbi-wireless-wifi1-country-'+name_value[country_name]+'" value="'+name_value[country_name]+'">'+country_name+'</option>';
+	    }
+	    s += '</select>';
+	    
+	    document.write(s);
+	    document.getElementById('cbid.wireless.wifi1.country').value = "<%=uci:get('wireless', 'wifi1', 'country')%>";
+	    document.close();
+	}
+
+
+</script>
+<div id="cbi-wireless-wifi1-country" class="cbi-value">
+    <label class="cbi-value-title" for="cbid.wireless.wifi1.country">Country Code</label>
+    <div class="cbi-value-field">
+		<script>showCountryList();</script>
+    </div>
+</div>
+
+

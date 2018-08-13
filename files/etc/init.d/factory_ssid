@@ -1,0 +1,52 @@
+#!/bin/sh /etc/rc.common
+
+START=19
+
+
+get_mac_dual() {
+	local device=$1
+	local phydevice=${device}
+	if [ "$device" = "wifi0" ]; then
+   		printf $(setconfig -g 6 |tr [a-z] [A-Z]|sed 's/://g'|cut -c 7-)
+	
+	else
+			printf $(setconfig -g 8 |tr [a-z] [A-Z]|sed 's/://g'|cut -c 7-)
+	 
+	fi
+}
+
+check_ssid() {
+	local ssid
+	local device
+	config_get ssid $1 ssid
+	config_get device $1 device
+
+		mac="$(get_mac_dual $device)"
+		ssid2=$(echo "$ssid")
+		ssid2=$(eval "echo $ssid2 | sed -e 's/-mac-/$mac/g'")
+		mac_ssid="$ssid2"
+		uci set wireless."$1".ssid="$mac_ssid"
+	
+}
+
+start() {
+	[ ! -d /overlay/etc/lighttpd ] && {
+                cp /rom/etc/config/wireless /etc/config/wireless
+                config_load wireless
+		config_foreach check_ssid wifi-iface
+		sleep 1
+		uci commit	
+  }
+
+
+	
+	
+}
+
+stop() {
+    echo "$0" do nothing
+}
+
+
+
+    
